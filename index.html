@@ -1423,18 +1423,27 @@ render();
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz2tIRePJndOI_LECmC4a9KUsSheyelPavbXEIlg9SZUAtj1l3pJEozfPyab8DrnkW4/exec";
 
+// VUE GLOBALE
 async function chargerVueGlobale() {
   const res = await fetch(API_URL + "?sheet=VUE%20GLOBALE");
   const data = await res.json();
+
   console.log("VUE GLOBALE :", data);
+
+  return data;
 }
 
+// AVIS & MOTS CLES
 async function chargerAvis() {
   const res = await fetch(API_URL + "?sheet=AVIS%20%26%20MOTS%20CLES");
   const data = await res.json();
-  console.log("AVIS :", data);
+
+  console.log("AVIS & MOTS CLES :", data);
+
+  return data;
 }
 
+// Lancement
 chargerVueGlobale();
 chargerAvis();
 
