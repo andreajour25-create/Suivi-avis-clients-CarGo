@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CarGo — Suivi E-Réputation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f0e0d;--ink2:#3d3b37;--ink3:#7a7670;--ink4:#b0aca5;
+  --paper:#f7f5f0;--paper2:#efecea;--paper3:#e5e1db;
+  --white:#fff;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.15);
+  --green:#1a7a4a;--green2:#25a865;--green-bg:#e8f5ee;
+  --red:#c0341a;--red-bg:#fdecea;
+  --amber:#b36200;--amber-bg:#fdf3e3;
+  --blue:#1455a4;--blue-bg:#e8f0fb;
+  --acc:#e85d04;
+  --nord:#1455a4;--nord-bg:#dbeafe;
+  --sud:#0369a1;--sud-bg:#e0f2fe;
+  --r:14px;--r2:10px;--r3:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+.topbar{background:var(--ink);color:var(--white);padding:0 28px;position:sticky;top:0;z-index:200;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-family:'Syne',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.5px;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.brand-sub{font-weight:400;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.bdot{width:8px;height:8px;background:var(--acc);border-radius:50%;flex-shrink:0}
+.topnav{display:flex;gap:2px}
+.tnav{background:none;border:none;color:rgba(255,255,255,.5);padding:7px 13px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.tnav:hover{color:var(--white);background:rgba(255,255,255,.08)}
+.tnav.on{color:var(--white);background:rgba(255,255,255,.13)}
+.topactions{display:flex;gap:8px;align-items:center}
+.tbtn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;transition:all .15s;white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.1);color:var(--white)}
+.tbtn.acc{background:var(--acc);border-color:var(--acc);color:var(--white)}.tbtn.acc:hover{background:#cf5204}
+.controls{background:var(--white);border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:56px;z-index:100}
+.clbl{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.7px;white-space:nowrap}
+.csep{width:1px;height:20px;background:var(--border2);flex-shrink:0}
+select{background:var(--paper);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--ink);outline:none;cursor:pointer}
+select:focus{border-color:var(--acc)}
+.ags{position:relative}
+.ag-trig{display:flex;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--ink);min-width:180px;user-select:none}
+.ag-arr{margin-left:auto;font-size:9px;color:var(--ink3);transition:transform .15s}
+.ag-arr.open{transform:rotate(180deg)}
+.ag-panel{position:absolute;top:calc(100% + 4px);left:0;background:var(--white);border:1px solid var(--border2);border-radius:var(--r2);box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:300;width:280px;padding:10px;display:none}
+.ag-panel.open{display:block}
+.ag-srch{width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:'Inter',sans-serif;background:var(--paper);outline:none;margin-bottom:8px}
+.ag-acts{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.ag-act{font-size:11px;cursor:pointer;background:none;border:1px solid var(--border);font-family:'Inter',sans-serif;padding:3px 8px;border-radius:4px;font-weight:500;transition:all .12s}
+.ag-act:hover{background:var(--paper2)}
+.ag-act.n{color:var(--nord);border-color:var(--nord-bg)}.ag-act.n:hover{background:var(--nord-bg)}
+.ag-act.s{color:var(--sud);border-color:var(--sud-bg)}.ag-act.s:hover{background:var(--sud-bg)}
+.ag-list{max-height:240px;overflow-y:auto}
+.ag-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.ag-item:hover{background:var(--paper)}
+.ag-item input{accent-color:var(--acc);cursor:pointer;flex-shrink:0}
+.ag-item label{cursor:pointer;font-size:12px}
+.ag-ghdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 6px 4px;border-top:1px solid var(--border);margin-top:4px;display:flex;align-items:center;gap:6px}
+.ag-ghdr:first-child{border-top:none;margin-top:0}
+.ag-ghdr.n{color:var(--nord)}.ag-ghdr.s{color:var(--sud)}
+.zdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+.zdot.n{background:var(--nord)}.zdot.s{background:var(--sud)}
+.zbdg{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap}
+.zbdg.n{background:var(--nord-bg);color:var(--nord)}.zbdg.s{background:var(--sud-bg);color:var(--sud)}
+.ctrl-rev{display:none}.ctrl-rev.show{display:flex;align-items:center;gap:8px}
+.main{max-width:1680px;margin:0 auto;padding:24px 28px}
+.page{display:none}.page.on{display:block}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.sttl{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:-.2px}
+.stag{font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:var(--ink3);background:var(--paper2);padding:2px 8px;border-radius:20px}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:20px}
+.kcard{background:var(--white);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden}
+.kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--paper3)}
+.kcard.cg::before{background:var(--green2)}.kcard.co::before{background:var(--acc)}.kcard.cb::before{background:var(--blue)}.kcard.ca::before{background:var(--amber)}
+.klbl{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.kval{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--ink);line-height:1}
+.ksub{font-size:11px;color:var(--ink3);margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.bdg{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600}
+.b-up{background:var(--green-bg);color:var(--green)}.b-dn{background:var(--red-bg);color:var(--red)}.b-flat{background:var(--paper2);color:var(--ink3)}
+.ai-bdg{display:inline-flex;align-items:center;gap:4px;background:#6d28d9;color:#fff;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600}
+.ch{position:relative;height:200px}.ch-tall{position:relative;height:320px}.ch-xl{position:relative;height:440px}
+.stbl{width:100%;border-collapse:collapse;font-size:12px}
+.stbl th{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding:0 10px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.stbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.stbl tbody tr:last-child td{border-bottom:none}
+.stbl tbody tr:hover td{background:var(--paper)}
+.stbl .anm{font-weight:600}
+.nval{font-family:'Syne',sans-serif;font-weight:700;font-size:13px}
+.zhdr td{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:7px 10px}
+.zhdr.n td{color:var(--nord);background:var(--nord-bg)}.zhdr.s td{color:var(--sud);background:var(--sud-bg)}
+.zrn td:first-child{border-left:3px solid var(--nord)}.zrs td:first-child{border-left:3px solid var(--sud)}
+/* Ranking positions — compactes */
+.rpos{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;width:24px;flex-shrink:0;color:var(--ink3)}
+.rpos.gold{color:#c8950a}.rpos.silver{color:#8a8a8a}.rpos.bronze{color:#b06030}.rpos.bot{color:var(--red)}
+/* Sud = bleu ciel */
+.ag-act.s2{color:#0369a1;border-color:#bae6fd}.ag-act.s2:hover{background:#e0f2fe}
+.ag-ghdr.s2{color:#0369a1}
+.zdot.s2{background:#38bdf8}.zbdg.s2{background:#e0f2fe;color:#0369a1}
+/* Bouton cadenas — discret */
+.mbtn-lock{background:none;border:1px solid var(--border2);color:var(--ink3);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;transition:all .15s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.mbtn-lock:hover{background:var(--paper2);color:var(--ink)}
+/* Zone d'import discrète avec cadenas */
+.dzone-admin{border:1px dashed var(--border2);border-radius:var(--r2);padding:12px 16px;cursor:pointer;transition:all .2s;background:var(--paper);display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink3);margin-bottom:10px}
+.dzone-admin:hover,.dzone-admin.drag{border-color:var(--acc);color:var(--ink);background:var(--paper2)}
+/* Multi-select mois */
+#sel-month{height:auto;min-height:32px;overflow:auto}
+#sel-month option{padding:2px 6px}
+.rrow{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:8px;transition:background .12s}
+.rrow:hover{background:var(--paper)}
+.rname{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rnote{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;width:40px;text-align:right}
+.rbw{width:70px;height:5px;background:var(--paper2);border-radius:3px;overflow:hidden}
+.rbar{height:100%;border-radius:3px}
+.rev{background:var(--white);border:1px solid var(--border);border-radius:var(--r3);padding:14px;margin-bottom:10px}
+.rev.pos{border-left:3px solid var(--green2)}.rev.neg{border-left:3px solid var(--red)}
+.revhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:6px;flex-wrap:wrap}
+.revagy{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px}
+.revdate{font-size:10px;color:var(--ink4)}
+.revtxt{font-size:12px;line-height:1.6;color:var(--ink2);margin-top:4px}
+.wc{display:flex;flex-wrap:wrap;gap:7px;padding:4px 0;min-height:60px}
+.ww{padding:4px 12px;border-radius:20px;font-weight:500;cursor:default;transition:transform .1s}
+.ww:hover{transform:scale(1.07)}
+.ww.p{background:var(--green-bg);color:var(--green)}.ww.n{background:var(--red-bg);color:var(--red)}
+.qrbar{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.qrname{width:110px;font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qrtrack{flex:1;height:7px;background:var(--paper2);border-radius:4px;overflow:hidden}
+.qrfill{height:100%;border-radius:4px;background:var(--blue)}
+.qrval{width:32px;text-align:right;font-size:11px;font-weight:600;color:var(--ink2)}
+.dzone{border:2px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--paper);margin-bottom:10px}
+.dzone:hover,.dzone.drag{border-color:var(--acc);background:rgba(232,93,4,.03)}
+.dzone.green:hover,.dzone.green.drag{border-color:var(--green);background:rgba(26,122,74,.03)}
+.dzone-ico{font-size:26px;margin-bottom:6px}
+.dzone-ttl{font-weight:600;font-size:13px;margin-bottom:3px}
+.dzone-sub{font-size:12px;color:var(--ink3)}
+input.fi{display:none}
+.fmthelp{background:var(--blue-bg);border-radius:var(--r3);padding:12px 14px;font-size:12px;color:var(--blue);margin-bottom:12px;line-height:1.7}
+.fmthelp code{background:rgba(20,85,164,.12);padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace}
+.prevbox{background:var(--paper);border-radius:var(--r3);padding:10px;font-size:11px;font-family:monospace;color:var(--ink2);max-height:120px;overflow-y:auto;border:1px solid var(--border);white-space:pre-wrap;word-break:break-all;margin-top:8px;display:none}
+.matchline{font-size:12px;margin-top:6px;display:none}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.ov.open{display:flex}
+.modal{background:var(--white);border-radius:18px;padding:28px;width:min(820px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.18)}
+.modal h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px}
+.mdesc{font-size:13px;color:var(--ink2);margin-bottom:20px;line-height:1.65}
+.itabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.itab{background:none;border:none;padding:8px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--ink3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.itab.on{color:var(--ink);border-bottom-color:var(--acc)}
+.dtbl{width:100%;border-collapse:collapse;font-size:12px}
+.dtbl th{font-size:10px;color:var(--ink3);font-weight:600;padding:0 6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.dtbl td{padding:5px 4px;border-bottom:1px solid var(--border)}
+.dtbl input[type=number]{width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:11px;font-family:'Inter',sans-serif;background:var(--paper);outline:none}
+.dtbl input:focus{border-color:var(--acc)}
+.macts{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
+.mbtn{padding:8px 18px;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;border:none;transition:all .15s}
+.mbtn.ghost{background:none;border:1px solid var(--border2);color:var(--ink2)}.mbtn.ghost:hover{background:var(--paper)}
+.mbtn.dark{background:var(--ink);color:var(--white)}.mbtn.dark:hover{background:var(--ink2)}
+.mbtn.grn{background:var(--green);color:var(--white)}.mbtn.grn:hover{background:#155e38}
+.aiload{display:none;align-items:center;gap:10px;padding:12px;background:var(--paper2);border-radius:var(--r2);font-size:13px;color:var(--ink2);margin-top:8px}
+.aiload.show{display:flex}
+.spin{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.revstats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.revstat{background:var(--paper2);border-radius:var(--r3);padding:8px 12px;font-size:12px}
+.revstat strong{font-family:'Syne',sans-serif;font-size:16px;display:block;line-height:1.1}
+.toast{position:fixed;bottom:28px;right:28px;background:var(--ink);color:var(--white);padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;max-width:340px}
+.toast.show{opacity:1;transform:translateY(0)}
+.empty{padding:40px;text-align:center;color:var(--ink3);font-size:13px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.page.on .card,.page.on .kcard{animation:fadeUp .22s ease both}
+.page.on .kcard:nth-child(2){animation-delay:.04s}.page.on .kcard:nth-child(3){animation-delay:.08s}
+.page.on .kcard:nth-child(4){animation-delay:.12s}.page.on .kcard:nth-child(5){animation-delay:.16s}
+/* Répartition notes */
+.star-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.star-lbl{width:24px;font-size:12px;font-weight:700;color:var(--ink2);text-align:right;flex-shrink:0}
+.star-track{flex:1;height:10px;background:var(--paper2);border-radius:5px;overflow:hidden}
+.star-fill{height:100%;border-radius:5px;transition:width .5s ease}
+.star-cnt{width:32px;font-size:11px;font-weight:600;color:var(--ink2);text-align:right;flex-shrink:0}
+.star-pct{width:34px;font-size:10px;color:var(--ink4);flex-shrink:0}
+.ch-donut{position:relative;height:180px;width:180px;margin:0 auto}
+@media(max-width:1000px){.g2{grid-template-columns:1fr}.main{padding:14px}.controls{padding:8px 14px}.krow{grid-template-columns:repeat(2,1fr)}.topnav .tnav{padding:6px 8px;font-size:11px}#hero-band{grid-template-columns:1fr 1fr!important;gap:16px!important}}
+@media print{.topbar,.controls{display:none!important}.main{padding:0}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><div class="bdot"></div><div><div>CarGo — E-Réputation</div><div class="brand-sub">Suivi avis agences · 2025–2026</div></div></div>
+  <nav class="topnav">
+    <button class="tnav on" onclick="goPage('overview',this)">Vue globale</button>
+    <button class="tnav"    onclick="goPage('ranking',this)">Classement</button>
+    <button class="tnav"    onclick="goPage('compare',this)">Comparaison</button>
+    <button class="tnav"    onclick="goPage('agency',this)">Fiche agence</button>
+    <button class="tnav"    onclick="goPage('reviews',this)">Avis &amp; Mots-clés</button>
+  </nav>
+  <div class="topactions">
+    <button class="tbtn acc" onclick="window.print()">⬇ Exporter</button>
+  </div>
+</header>
+
+<!-- BARRE UNIQUE DE FILTRES -->
+<div class="controls">
+  <span class="clbl">Mois</span>
+  <div style="position:relative">
+    <select id="sel-month" multiple size="1" onchange="onCtrl()" style="min-width:120px" title="Maintenez Ctrl pour sélectionner plusieurs mois"></select>
+    <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--ink3);pointer-events:none">▼</span>
+  </div>
+  <div class="csep"></div>
+  <span class="clbl">Agence(s)</span>
+  <div class="ags" id="ags">
+    <div class="ag-trig" onclick="toggleAg()"><span id="aglbl">Toutes (19)</span><span class="ag-arr" id="agarr">▼</span></div>
+    <div class="ag-panel" id="agpanel">
+      <input class="ag-srch" type="text" placeholder="Rechercher…" oninput="filterAg(this.value)">
+      <div class="ag-acts">
+        <button class="ag-act" onclick="agAll()">Tout</button>
+        <button class="ag-act" onclick="agNone()">Aucun</button>
+        <button class="ag-act n" onclick="agZone('n')">Nord</button>
+        <button class="ag-act s2" onclick="agZone('s')">Sud</button>
+      </div>
+      <div class="ag-list" id="aglist"></div>
+    </div>
+  </div>
+  <!-- Filtres extra — page Avis uniquement -->
+  <div class="csep ctrl-rev" id="csep-rev"></div>
+  <div class="ctrl-rev" id="ctrl-note-w">
+    <span class="clbl">Note</span>
+    <select id="sel-note" onchange="applyRevFilters()">
+      <option value="all">Toutes</option>
+      <option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option>
+      <option value="3">⭐⭐⭐</option><option value="2">⭐⭐</option><option value="1">⭐</option>
+      <option value="pos">Positifs ≥ 4</option><option value="neg">Critiques ≤ 3</option>
+    </select>
+  </div>
+  <div class="ctrl-rev" id="ctrl-srch-w">
+    <input type="text" id="sel-search" placeholder="🔍 Rechercher…" oninput="applyRevFilters()"
+      style="border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;font-family:'Inter',sans-serif;background:var(--paper);outline:none;min-width:160px">
+  </div>
+  <div class="ctrl-rev" id="ctrl-rst-w">
+    <button class="mbtn ghost" style="padding:5px 12px;font-size:12px" onclick="resetRevFilters()">✕ Réinitialiser</button>
+    <span id="rf-count" style="font-size:11px;color:var(--ink3);white-space:nowrap"></span>
+  </div>
+  <!-- Bouton import — page Vue globale uniquement, discret avec cadenas -->
+  <div class="csep" id="csep-imp"></div>
+  <div id="ctrl-imp-w" style="display:flex;align-items:center;gap:8px">
+    <button class="mbtn-lock" onclick="openImpModal()" title="Accès administrateur">🔒 <span style="font-size:11px">Mise à jour</span></button>
+    <span id="imp-last" style="font-size:11px;color:var(--ink3)"></span>
+  </div>
+</div>
+
+<main class="main">
+
+<!-- VUE GLOBALE -->
+<div class="page on" id="page-overview">
+
+  <!-- HERO BAND : note + étoiles + indicateurs clés -->
+  <div id="hero-band" style="display:grid;grid-template-columns:auto 1fr auto auto auto;gap:12px;align-items:center;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin-bottom:16px;flex-wrap:wrap"></div>
+
+  <!-- GRAPHIQUES EVOLUTION -->
+  <div class="g2">
+    <div class="card"><div class="sttl">Évolution note moyenne <span class="stag">tous mois</span></div><div class="ch"><canvas id="ch-ne"></canvas></div></div>
+    <div class="card"><div class="sttl">Avis récoltés par mois <span class="stag">tous mois</span></div><div class="ch"><canvas id="ch-ae"></canvas></div></div>
+  </div>
+
+  <!-- NOTE M VS M-1 + QR -->
+  <div class="g2">
+    <div class="card"><div class="sttl">Note ce mois vs précédent <span class="stag" id="cmp-lbl"></span></div><div class="ch"><canvas id="ch-cn"></canvas></div></div>
+    <div class="card"><div class="sttl">Scans QR code <span class="stag">top 12</span></div><div id="qr-bars"></div></div>
+  </div>
+
+  <!-- RÉPARTITION NOTES PAR ÉTOILE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="sttl">Répartition des avis récoltés <span class="stag" id="dist-lbl"></span></div>
+    <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap">
+      <div class="ch-donut"><canvas id="ch-donut"></canvas></div>
+      <div style="flex:1;min-width:200px" id="star-bars"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sttl">Toutes les agences <span class="stag" id="tbl-zlbl"></span></div>
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Total avis</th><th>Récoltés ce mois</th><th>Évol. m-1</th><th>Rés. en ligne</th><th>Note moy.</th><th>Évol. note</th><th>Scans QR</th></tr></thead><tbody id="main-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- CLASSEMENT -->
+<div class="page" id="page-ranking">
+  <div class="g2">
+    <div class="card"><div class="sttl">🏆 Top 5 — Meilleures notes</div><div id="top5"></div></div>
+    <div class="card"><div class="sttl">⚡ Flop 5 — Notes les plus basses</div><div id="flop5"></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="sttl">🏅 Top 5 — Plus d'avis récoltés</div><div id="top5a"></div></div>
+    <div class="card"><div class="sttl">📈 Top 5 — Meilleures progressions</div><div id="top5p"></div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px"><div class="sttl">Classement complet — note <span class="stag">🔵 Nord · 🔴 Sud</span></div><div class="ch-xl"><canvas id="ch-rn"></canvas></div></div>
+  <div class="card"><div class="sttl">Classement — avis récoltés <span class="stag">🔵 Nord · 🔴 Sud</span></div><div class="ch-xl"><canvas id="ch-ra"></canvas></div></div>
+</div>
+
+<!-- COMPARAISON -->
+<div class="page" id="page-compare">
+  <div class="card" style="margin-bottom:16px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap">
+    <div>
+      <div class="clbl" style="margin-bottom:6px">Période A <span style="font-weight:400;font-size:10px;color:var(--ink3)">(Ctrl pour plusieurs)</span></div>
+      <select id="cmp-a" multiple size="4" style="min-width:120px;border:1px solid var(--border2);border-radius:6px;padding:4px;font-family:'Inter',sans-serif;font-size:12px;background:var(--paper)"></select>
+    </div>
+    <div style="font-size:24px;color:var(--ink3);align-self:center;padding-top:18px">↔</div>
+    <div>
+      <div class="clbl" style="margin-bottom:6px">Période B <span style="font-weight:400;font-size:10px;color:var(--ink3)">(Ctrl pour plusieurs)</span></div>
+      <select id="cmp-b" multiple size="4" style="min-width:120px;border:1px solid var(--border2);border-radius:6px;padding:4px;font-family:'Inter',sans-serif;font-size:12px;background:var(--paper)"></select>
+    </div>
+    <div style="align-self:center;padding-top:18px">
+      <button class="mbtn dark" style="padding:8px 20px" onclick="doCompare()">Comparer</button>
+    </div>
+  </div>
+  <div class="g2" id="cmp-kpis"></div>
+  <div class="card" style="margin-bottom:16px"><div class="sttl">Note moyenne — A vs B</div><div class="ch-tall"><canvas id="ch-cnb"></canvas></div></div>
+  <div class="card"><div class="sttl">Avis récoltés — A vs B</div><div class="ch-tall"><canvas id="ch-cab"></canvas></div></div>
+</div>
+
+<!-- FICHE AGENCE -->
+<div class="page" id="page-agency">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+    <span class="clbl">Agence</span><select id="ag-focus" onchange="doAgency()" style="min-width:220px"></select>
+  </div>
+  <div class="krow" id="ag-krow"></div>
+  <div class="g2">
+    <div class="card"><div class="sttl">Historique note</div><div class="ch"><canvas id="ch-agn"></canvas></div></div>
+    <div class="card"><div class="sttl">Historique avis récoltés</div><div class="ch"><canvas id="ch-aga"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="sttl">Historique réservations en ligne</div><div class="ch"><canvas id="ch-agr"></canvas></div></div>
+    <div class="card"><div class="sttl">Historique scans QR</div><div class="ch"><canvas id="ch-agq"></canvas></div></div>
+  </div>
+</div>
+
+<!-- AVIS & MOTS-CLÉS -->
+<div class="page" id="page-reviews">
+  <div class="card" style="margin-bottom:16px">
+    <div class="sttl">Avis &amp; Mots-clés <span class="stag" id="rev-month-lbl"></span></div>
+    <!-- Zone import discrète avec cadenas -->
+    <div class="dzone-admin" id="rev-drop" onclick="document.getElementById('rev-fi').click()" ondragover="revDrag(event,1)" ondragleave="revDrag(event,0)" ondrop="revDrop(event)">
+      <span style="font-size:16px">🔒</span>
+      <span>Importer l'export Bridge pour ce mois — <em style="font-size:11px">CSV ou TXT · Agence ; Note ; Date ; Texte</em></span>
+      <input type="file" id="rev-fi" class="fi" accept=".csv,.txt" onchange="handleRevFile(this.files[0])">
+    </div>
+    <div class="aiload" id="ai-load"><div class="spin"></div><span id="ai-msg">Analyse…</span></div>
+    <div class="revstats" id="rev-stats" style="display:none"></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="sttl">☁ Mots-clés positifs <span class="stag" id="wc-pos-lbl"></span></div><div class="wc" id="wc-pos"><span style="font-size:12px;color:var(--ink3)">Importez des avis pour générer le nuage.</span></div></div>
+    <div class="card"><div class="sttl">☁ Points à améliorer <span class="stag" id="wc-neg-lbl"></span></div><div class="wc" id="wc-neg"><span style="font-size:12px;color:var(--ink3)">Importez des avis pour générer le nuage.</span></div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="sttl">⭐ Top 5 — Meilleurs avis</div><div id="rev-top"><div class="empty">Importez un fichier d'avis.</div></div></div>
+    <div class="card"><div class="sttl">🔻 Top 5 — Avis les plus critiques</div><div id="rev-bot"><div class="empty">Importez un fichier d'avis.</div></div></div>
+  </div>
+  <div class="card" id="all-rev-card" style="display:none">
+    <div class="sttl">Avis filtrés <span class="stag" id="all-rev-cnt"></span></div>
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Note</th><th>Date</th><th>Commentaire</th></tr></thead><tbody id="all-rev-body"></tbody></table></div>
+  </div>
+</div>
+
+</main>
+
+<!-- MODAL IMPORT STATS -->
+<div class="ov" id="imp-modal">
+  <div class="modal">
+    <h2>📥 Importer les statistiques mensuelles</h2>
+    <p class="mdesc">Glissez un fichier Excel (.xls / .xlsx) par mois. Le mois est détecté automatiquement depuis le nom du fichier ou son contenu. Vous pouvez importer plusieurs fichiers l'un après l'autre.</p>
+    <div class="itabs">
+      <button class="itab on" onclick="switchImpTab('xls',this)">📊 Import Excel</button>
+      <button class="itab"    onclick="switchImpTab('manual',this)">✏ Saisie manuelle</button>
+    </div>
+
+    <!-- ONGLET EXCEL -->
+    <div id="imp-tab-xls">
+      <div class="fmthelp">
+        <strong>Format attendu (colonnes dans cet ordre) :</strong><br>
+        <code>Agence · Total avis · Récoltés · Réservations · Note moy. · Scans QR</code><br>
+        Le mois est détecté depuis le nom du fichier (ex : <code>mars-26.xlsx</code>) ou la 1ère ligne.
+      </div>
+      <!-- Zone de dépôt -->
+      <div class="dzone" id="imp-drop" onclick="document.getElementById('imp-fi').click()" ondragover="impDrag(event,1)" ondragleave="impDrag(event,0)" ondrop="impDrop(event)" style="margin-bottom:10px">
+        <div class="dzone-ico">📊</div>
+        <div class="dzone-ttl">Glissez votre fichier Excel ici</div>
+        <div class="dzone-sub">.xls ou .xlsx · un fichier = un mois</div>
+        <input type="file" id="imp-fi" class="fi" accept=".xls,.xlsx" onchange="handleImpFile(this.files[0])">
+      </div>
+      <!-- Preview du fichier chargé -->
+      <div id="imp-preview" class="prevbox"></div>
+      <div id="imp-match" class="matchline"></div>
+      <!-- Liste des mois déjà importés dans cette session -->
+      <div id="imp-queue" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ONGLET MANUEL -->
+    <div id="imp-tab-manual" style="display:none">
+      <div style="margin-bottom:10px;font-size:12px;color:var(--ink2)">Mois : <strong id="man-month-display"></strong></div>
+      <div style="overflow-x:auto"><table class="dtbl">
+        <thead><tr><th>Agence</th><th>Zone</th><th>Total</th><th>Récoltés</th><th>Rés.</th><th>Note</th><th>QR</th></tr></thead>
+        <tbody id="m-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <div class="macts">
+      <button class="mbtn ghost" onclick="closeImpModal()">Fermer</button>
+      <button class="mbtn grn" id="imp-save-btn" onclick="saveImp()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══ AGENCES ══ */
+const AG=[
+  // NORD
+  {id:'fecamp',     name:'Fécamp',                zone:'n'},
+  {id:'woippy',     name:'Woippy',                zone:'n'},
+  {id:'ludres',     name:'Ludres',                zone:'n'},
+  {id:'vitry',      name:'Vitry sur Seine',       zone:'n'},
+  {id:'lyon',       name:'Lyon',                  zone:'n'},
+  {id:'genas',      name:'Genas',                 zone:'n'},
+  // SUD
+  {id:'thonon',     name:'Thonon / Margencel',    zone:'s'},
+  {id:'sallanches', name:'Sallanches',             zone:'s'},
+  {id:'voglans',    name:'Voglans',                zone:'s'},
+  {id:'albertville',name:'Albertville',            zone:'s'},
+  {id:'annemasse',  name:'Annemasse / V. la Grand',zone:'s'},
+  {id:'gex',        name:'Gex / Cessy',            zone:'s'},
+  {id:'saintjean',  name:'St Jean de Maurienne',   zone:'s'},
+  {id:'seynod',     name:'Seynod',                 zone:'s'},
+  {id:'annecy',     name:'Annecy',                 zone:'s'},
+  {id:'chambery',   name:'Chambéry',               zone:'s'},
+  {id:'pontclaix',  name:'Pont de Claix',          zone:'s'},
+  {id:'antibes',    name:'Antibes',                zone:'s'},
+  {id:'crolles',    name:'Crolles',                zone:'s'},
+];
+
+/* ══ MOIS ══ */
+let MONTHS=['jan25','feb25','mar25','apr25','may25','jun25','jul25','aug25','sep25','oct25','nov25','dec25','jan26','feb26','mar26'];
+const ML={jan25:'Janv 25',feb25:'Fév 25',mar25:'Mars 25',apr25:'Avr 25',may25:'Mai 25',jun25:'Juin 25',jul25:'Juil 25',aug25:'Août 25',sep25:'Sept 25',oct25:'Oct 25',nov25:'Nov 25',dec25:'Déc 25',jan26:'Janv 26',feb26:'Fév 26',mar26:'Mars 26',apr26:'Avr 26',may26:'Mai 26',jun26:'Juin 26',jul26:'Juil 26',aug26:'Août 26',sep26:'Sept 26',oct26:'Oct 26',nov26:'Nov 26',dec26:'Déc 26'};
+const MDET={'janv-25':'jan25','fév-25':'feb25','fev-25':'feb25','mars-25':'mar25','avr-25':'apr25','mai-25':'may25','juin-25':'jun25','juil-25':'jul25','août-25':'aug25','aout-25':'aug25','sept-25':'sep25','oct-25':'oct25','nov-25':'nov25','déc-25':'dec25','dec-25':'dec25','janv-26':'jan26','fév-26':'feb26','fev-26':'feb26','mars-26':'mar26','avr-26':'apr26','mai-26':'may26','juin-26':'jun26','juil-26':'jul26','août-26':'aug26','sept-26':'sep26','oct-26':'oct26','nov-26':'nov26','déc-26':'dec26','dec-26':'dec26'};
+function ml(m){return ML[m]||m;}
+
+/* ══ DONNÉES 100% ISSUES DU CSV ══
+   Parsées colonne par colonne depuis le fichier source.
+   QR : nov25 absent du fichier source → 0 pour tous.
+   oct25 QR = colonne 36 du CSV (après les détails 1-5 étoiles).
+*/
+let D={
+  thonon:{
+    jun25:{total:10,rec:5,resa:0,note:4.4,qr:7},
+    jul25:{total:11,rec:1,resa:0,note:4.5,qr:2},
+    aug25:{total:14,rec:3,resa:0,note:4.6,qr:8},
+    sep25:{total:15,rec:1,resa:8,note:4.6,qr:1},
+    oct25:{total:15,rec:0,resa:8,note:4.6,qr:0},
+    nov25:{total:17,rec:2,resa:12,note:4.6,qr:0},
+    dec25:{total:18,rec:1,resa:13,note:4.7,qr:0},
+    jan26:{total:22,rec:4,resa:7,note:4.7,qr:3},
+    feb26:{total:23,rec:1,resa:11,note:4.8,qr:0},
+    mar26:{total:27,rec:4,resa:7,note:4.8,qr:2},
+  },
+  sallanches:{
+    jun25:{total:36,rec:5,resa:0,note:4.7,qr:7},
+    jul25:{total:42,rec:6,resa:0,note:4.7,qr:4},
+    aug25:{total:52,rec:10,resa:0,note:4.8,qr:7},
+    sep25:{total:61,rec:9,resa:4,note:4.8,qr:2},
+    oct25:{total:65,rec:4,resa:4,note:4.8,qr:6},
+    nov25:{total:66,rec:1,resa:6,note:4.8,qr:0},
+    dec25:{total:68,rec:2,resa:3,note:4.8,qr:2},
+    jan26:{total:69,rec:1,resa:4,note:4.8,qr:2},
+    feb26:{total:71,rec:2,resa:5,note:4.8,qr:2},
+    mar26:{total:72,rec:1,resa:3,note:4.8,qr:2},
+  },
+  voglans:{
+    jun25:{total:75,rec:6,resa:0,note:4.4,qr:0},
+    jul25:{total:75,rec:0,resa:0,note:4.4,qr:3},
+    aug25:{total:76,rec:1,resa:0,note:4.4,qr:0},
+    sep25:{total:76,rec:0,resa:2,note:4.4,qr:0},
+    oct25:{total:76,rec:0,resa:11,note:4.4,qr:0},
+    nov25:{total:76,rec:0,resa:22,note:4.4,qr:0},
+    dec25:{total:76,rec:0,resa:19,note:4.4,qr:0},
+    jan26:{total:76,rec:0,resa:14,note:4.4,qr:0},
+    feb26:{total:77,rec:1,resa:7,note:4.4,qr:0},
+    mar26:{total:77,rec:0,resa:13,note:4.4,qr:0},
+  },
+  albertville:{
+    jun25:{total:11,rec:0,resa:0,note:5,qr:0},
+    jul25:{total:11,rec:0,resa:0,note:5,qr:1},
+    aug25:{total:11,rec:0,resa:0,note:5,qr:1},
+    sep25:{total:12,rec:1,resa:1,note:5,qr:5},
+    oct25:{total:14,rec:2,resa:5,note:5,qr:0},
+    nov25:{total:16,rec:2,resa:3,note:4.8,qr:0},
+    dec25:{total:16,rec:0,resa:6,note:4.8,qr:0},
+    jan26:{total:16,rec:0,resa:2,note:4.8,qr:1},
+    feb26:{total:17,rec:1,resa:1,note:4.8,qr:0},
+    mar26:{total:26,rec:9,resa:3,note:4.8,qr:0},
+  },
+  annemasse:{
+    jun25:{total:82,rec:1,resa:0,note:4.1,qr:1},
+    jul25:{total:86,rec:4,resa:0,note:4.1,qr:7},
+    aug25:{total:91,rec:6,resa:0,note:4.1,qr:4},
+    sep25:{total:92,rec:1,resa:11,note:4.1,qr:1},
+    oct25:{total:96,rec:4,resa:7,note:4.2,qr:4},
+    nov25:{total:96,rec:0,resa:10,note:4.2,qr:0},
+    dec25:{total:96,rec:0,resa:20,note:4.2,qr:0},
+    jan26:{total:97,rec:1,resa:10,note:4.2,qr:1},
+    feb26:{total:97,rec:0,resa:9,note:4.2,qr:0},
+    mar26:{total:97,rec:0,resa:11,note:4.2,qr:0},
+  },
+  gex:{
+    jun25:{total:8,rec:2,resa:0,note:4.6,qr:2},
+    jul25:{total:10,rec:2,resa:0,note:4.6,qr:2},
+    aug25:{total:13,rec:3,resa:0,note:4.7,qr:4},
+    sep25:{total:16,rec:3,resa:3,note:4.8,qr:7},
+    oct25:{total:23,rec:7,resa:9,note:4.8,qr:9},
+    nov25:{total:35,rec:12,resa:13,note:4.7,qr:0},
+    dec25:{total:40,rec:5,resa:13,note:4.6,qr:4},
+    jan26:{total:48,rec:8,resa:8,note:4.7,qr:8},
+    feb26:{total:50,rec:2,resa:7,note:4.7,qr:2},
+    mar26:{total:53,rec:3,resa:3,note:4.7,qr:4}, // vérifié CSV col89 Gex = 4
+  },
+  saintjean:{
+    jun25:{total:0,rec:0,resa:0,note:0,qr:0},
+    jul25:{total:1,rec:0,resa:0,note:1,qr:0},
+    aug25:{total:3,rec:2,resa:0,note:2.3,qr:0},
+    sep25:{total:3,rec:0,resa:4,note:2.3,qr:2},
+    oct25:{total:7,rec:3,resa:3,note:3.3,qr:0},
+    nov25:{total:7,rec:0,resa:3,note:3.3,qr:0},
+    dec25:{total:13,rec:6,resa:4,note:4.3,qr:1},
+    jan26:{total:16,rec:4,resa:3,note:4.4,qr:0},
+    feb26:{total:17,rec:1,resa:13,note:4.5,qr:0},
+    mar26:{total:17,rec:0,resa:11,note:4.5,qr:0},
+  },
+  seynod:{
+    jun25:{total:42,rec:0,resa:0,note:4.4,qr:0},
+    jul25:{total:44,rec:2,resa:0,note:4.3,qr:1},
+    aug25:{total:46,rec:2,resa:0,note:4.3,qr:0},
+    sep25:{total:48,rec:2,resa:9,note:4.3,qr:4},
+    oct25:{total:48,rec:0,resa:21,note:4.3,qr:0},
+    nov25:{total:48,rec:0,resa:27,note:4.3,qr:0},
+    dec25:{total:49,rec:1,resa:18,note:4.4,qr:0},
+    jan26:{total:51,rec:2,resa:13,note:4.4,qr:0},
+    feb26:{total:52,rec:1,resa:8,note:4.4,qr:0},
+    mar26:{total:54,rec:2,resa:11,note:4.4,qr:0},
+  },
+  annecy:{
+    jun25:{total:64,rec:0,resa:0,note:4.4,qr:0},
+    jul25:{total:64,rec:0,resa:0,note:4.4,qr:0},
+    aug25:{total:64,rec:0,resa:0,note:4.4,qr:0},
+    sep25:{total:65,rec:1,resa:22,note:4.4,qr:0},
+    oct25:{total:65,rec:0,resa:14,note:4.4,qr:0},
+    nov25:{total:67,rec:2,resa:19,note:4.4,qr:0},
+    dec25:{total:68,rec:1,resa:0,note:4.5,qr:0},
+    jan26:{total:68,rec:0,resa:13,note:4.5,qr:0},
+    feb26:{total:70,rec:2,resa:11,note:4.5,qr:0},
+    mar26:{total:75,rec:5,resa:13,note:4.5,qr:3},
+  },
+  chambery:{
+    jun25:{total:57,rec:3,resa:0,note:4.0,qr:0},
+    jul25:{total:60,rec:3,resa:0,note:4.0,qr:3},
+    aug25:{total:66,rec:6,resa:0,note:4.1,qr:4},
+    sep25:{total:69,rec:3,resa:6,note:4.2,qr:1},
+    oct25:{total:71,rec:2,resa:5,note:4.1,qr:0},
+    nov25:{total:72,rec:1,resa:11,note:4.2,qr:0},
+    dec25:{total:74,rec:2,resa:12,note:4.2,qr:1},
+    jan26:{total:76,rec:2,resa:6,note:4.2,qr:2},
+    feb26:{total:76,rec:0,resa:9,note:4.2,qr:0},
+    mar26:{total:76,rec:0,resa:8,note:4.2,qr:1},
+  },
+  fecamp:{
+    jun25:{total:59,rec:1,resa:0,note:4.5,qr:0},
+    jul25:{total:61,rec:2,resa:0,note:4.5,qr:3},
+    aug25:{total:62,rec:1,resa:0,note:4.4,qr:1},
+    sep25:{total:63,rec:1,resa:5,note:4.4,qr:1},
+    oct25:{total:65,rec:2,resa:6,note:4.4,qr:1},
+    nov25:{total:67,rec:2,resa:10,note:4.4,qr:0},
+    dec25:{total:68,rec:1,resa:18,note:4.4,qr:0},
+    jan26:{total:69,rec:1,resa:4,note:4.4,qr:0},
+    feb26:{total:81,rec:12,resa:6,note:4.6,qr:12},
+    mar26:{total:111,rec:28,resa:10,note:4.6,qr:29},
+  },
+  woippy:{
+    jun25:{total:23,rec:1,resa:0,note:4.7,qr:1},
+    jul25:{total:25,rec:2,resa:0,note:4.7,qr:0},
+    aug25:{total:25,rec:0,resa:0,note:4.7,qr:0},
+    sep25:{total:25,rec:0,resa:1,note:4.7,qr:0},
+    oct25:{total:26,rec:1,resa:0,note:4.6,qr:0},
+    nov25:{total:26,rec:0,resa:1,note:4.6,qr:0},
+    dec25:{total:27,rec:1,resa:1,note:4.6,qr:1},
+    jan26:{total:31,rec:4,resa:2,note:4.5,qr:2},
+    feb26:{total:37,rec:6,resa:1,note:4.6,qr:2},
+    mar26:{total:37,rec:0,resa:1,note:4.6,qr:1},
+  },
+  ludres:{
+    jun25:{total:65,rec:4,resa:0,note:4.8,qr:4},
+    jul25:{total:67,rec:2,resa:0,note:4.8,qr:6},
+    aug25:{total:68,rec:1,resa:0,note:4.8,qr:0},
+    sep25:{total:69,rec:1,resa:10,note:4.8,qr:1},
+    oct25:{total:71,rec:2,resa:19,note:4.8,qr:4},
+    nov25:{total:71,rec:0,resa:13,note:4.8,qr:0},
+    dec25:{total:75,rec:4,resa:10,note:4.8,qr:5},
+    jan26:{total:78,rec:3,resa:17,note:4.8,qr:4},
+    feb26:{total:82,rec:4,resa:10,note:4.8,qr:4},
+    mar26:{total:96,rec:14,resa:14,note:4.9,qr:11},
+  },
+  lyon:{
+    jun25:{total:41,rec:1,resa:0,note:3.5,qr:2},
+    jul25:{total:41,rec:0,resa:0,note:3.5,qr:0},
+    aug25:{total:41,rec:0,resa:0,note:3.5,qr:0},
+    sep25:{total:42,rec:1,resa:11,note:3.5,qr:0},
+    oct25:{total:44,rec:2,resa:24,note:3.4,qr:0},
+    nov25:{total:44,rec:0,resa:20,note:3.4,qr:0},
+    dec25:{total:44,rec:0,resa:16,note:3.4,qr:1},
+    jan26:{total:44,rec:0,resa:8,note:3.4,qr:0},
+    feb26:{total:46,rec:2,resa:14,note:3.5,qr:0},
+    mar26:{total:49,rec:3,resa:20,note:3.4,qr:0},
+  },
+  genas:{
+    jun25:{total:22,rec:6,resa:0,note:4.6,qr:4},
+    jul25:{total:26,rec:4,resa:0,note:4.6,qr:5},
+    aug25:{total:28,rec:2,resa:0,note:4.6,qr:1},
+    sep25:{total:28,rec:0,resa:0,note:4.6,qr:0},
+    oct25:{total:29,rec:1,resa:1,note:4.7,qr:1},
+    nov25:{total:30,rec:1,resa:0,note:4.7,qr:0},
+    dec25:{total:30,rec:0,resa:0,note:4.7,qr:0},
+    jan26:{total:30,rec:0,resa:2,note:4.7,qr:0},
+    feb26:{total:31,rec:0,resa:5,note:4.7,qr:1},
+    mar26:{total:32,rec:1,resa:5,note:4.7,qr:2},
+  },
+  vitry:{
+    jun25:{total:23,rec:1,resa:0,note:3.7,qr:3},
+    jul25:{total:25,rec:2,resa:0,note:3.8,qr:4},
+    aug25:{total:38,rec:13,resa:0,note:4.2,qr:7},
+    sep25:{total:42,rec:4,resa:12,note:4.3,qr:4},
+    oct25:{total:42,rec:0,resa:8,note:4.3,qr:0},
+    nov25:{total:47,rec:5,resa:15,note:4.4,qr:0},
+    dec25:{total:47,rec:0,resa:16,note:4.4,qr:1},
+    jan26:{total:50,rec:3,resa:8,note:4.4,qr:2},
+    feb26:{total:53,rec:3,resa:3,note:4.4,qr:1},
+    mar26:{total:56,rec:3,resa:9,note:4.4,qr:3},
+  },
+  pontclaix:{
+    jun25:{total:36,rec:4,resa:0,note:3.9,qr:6},
+    jul25:{total:36,rec:0,resa:0,note:3.9,qr:1},
+    aug25:{total:36,rec:0,resa:0,note:3.9,qr:0},
+    sep25:{total:36,rec:0,resa:12,note:3.9,qr:0},
+    oct25:{total:36,rec:0,resa:11,note:3.9,qr:0},
+    nov25:{total:36,rec:0,resa:16,note:3.9,qr:0},
+    dec25:{total:36,rec:0,resa:17,note:3.9,qr:0},
+    jan26:{total:36,rec:0,resa:8,note:3.9,qr:1},
+    feb26:{total:36,rec:0,resa:11,note:3.9,qr:0},
+    mar26:{total:39,rec:3,resa:15,note:4.0,qr:3},
+  },
+  antibes:{
+    jun25:{total:8,rec:1,resa:0,note:4.8,qr:4},
+    jul25:{total:15,rec:7,resa:0,note:4.9,qr:7},
+    aug25:{total:17,rec:2,resa:0,note:4.9,qr:5},
+    sep25:{total:19,rec:2,resa:0,note:4.9,qr:2},
+    oct25:{total:20,rec:1,resa:8,note:4.9,qr:0},
+    nov25:{total:20,rec:0,resa:6,note:4.9,qr:0},
+    dec25:{total:21,rec:1,resa:6,note:4.9,qr:1},
+    jan26:{total:21,rec:0,resa:3,note:4.9,qr:0},
+    feb26:{total:22,rec:1,resa:1,note:4.9,qr:0},
+    mar26:{total:22,rec:0,resa:3,note:4.9,qr:0},
+  },
+  crolles:{
+    jun25:{total:0,rec:0,resa:0,note:0,qr:0},
+    jul25:{total:0,rec:0,resa:0,note:0,qr:0},
+    aug25:{total:0,rec:0,resa:0,note:0,qr:0},
+    sep25:{total:0,rec:0,resa:0,note:0,qr:0},
+    oct25:{total:0,rec:0,resa:0,note:0,qr:0},
+    nov25:{total:0,rec:0,resa:4,note:0,qr:0},
+    dec25:{total:0,rec:0,resa:2,note:0,qr:0},
+    jan26:{total:0,rec:0,resa:3,note:0,qr:0},
+    feb26:{total:4,rec:4,resa:5,note:5,qr:2},
+    mar26:{total:12,rec:8,resa:10,note:5,qr:8},
+  },
+};
+
+/* ══ AVIS PAR MOIS ══ */
+let REVIEWS={};
+
+/* ══ LOCALSTORAGE v6 ══ */
+try{
+  const sv=JSON.parse(localStorage.getItem('cargo_v6')||'{}');
+  if(sv._m&&sv._m.length>MONTHS.length)MONTHS=sv._m;
+  if(sv._rev)REVIEWS=sv._rev;
+  // Fusionner les imports futurs (nouveaux mois) sans écraser les données hardcodées
+  AG.forEach(a=>{if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{if(!MONTHS.includes(m)||m>='apr26')D[a.id][m]=d;});});
+}catch(e){}
+
+function saveLS(){const o={_m:MONTHS,_rev:REVIEWS};AG.forEach(a=>{o[a.id]=D[a.id];});localStorage.setItem('cargo_v6',JSON.stringify(o));}
+
+let selAg=new Set(AG.map(a=>a.id));
+let curMonth=MONTHS[MONTHS.length-1];
+let curPage='overview';
+
+/* ══ MONTH SELECTS ══ */
+function buildMonthSelects(){
+  // Barre principale : multi-select
+  const ms=document.getElementById('sel-month');
+  ms.innerHTML=MONTHS.map(m=>`<option value="${m}">${ml(m)}</option>`).join('');
+  [...ms.options].forEach(o=>o.selected=(o.value===curMonth));
+  // Comparaison : multi-select A et B
+  const opts=MONTHS.map(m=>`<option value="${m}">${ml(m)}</option>`).join('');
+  ['cmp-a','cmp-b'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  // Pré-sélection : A = avant-dernier, B = dernier
+  const ca=document.getElementById('cmp-a'),cb=document.getElementById('cmp-b');
+  if(ca)[...ca.options].forEach(o=>o.selected=(o.value===MONTHS[Math.max(0,MONTHS.length-2)]));
+  if(cb)[...cb.options].forEach(o=>o.selected=(o.value===MONTHS[MONTHS.length-1]));
+}
+function getSelectedMonths(){
+  const ms=document.getElementById('sel-month');
+  const sel=[...ms.selectedOptions].map(o=>o.value);
+  return sel.length?sel:[MONTHS[MONTHS.length-1]];
+}
+function addMonth(m){
+  if(!MONTHS.includes(m)){MONTHS.push(m);AG.forEach(a=>{if(!D[a.id])D[a.id]={};if(!D[a.id][m])D[a.id][m]={total:0,rec:0,resa:0,note:0,qr:0};});buildMonthSelects();}
+  curMonth=m;
+  [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
+}
+function getSelectedMonths(){
+  const ms=document.getElementById('sel-month');
+  const sel=[...ms.selectedOptions].map(o=>o.value);
+  return sel.length?sel:[MONTHS[MONTHS.length-1]];
+}
+function addMonth(m){
+  if(!MONTHS.includes(m)){MONTHS.push(m);AG.forEach(a=>{if(!D[a.id])D[a.id]={};if(!D[a.id][m])D[a.id][m]={total:0,rec:0,resa:0,note:0,qr:0};});buildMonthSelects();}
+  curMonth=m;
+  [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
+}
+
+/* ══ AGENCY DROPDOWN ══ */
+function buildAgList(){
+  const l=document.getElementById('aglist');
+  const zCfg={n:{cls:'n',lbl:'Nord'},s:{cls:'s2',lbl:'Sud'}};
+  ['n','s'].forEach(z=>{
+    const c=zCfg[z];
+    l.insertAdjacentHTML('beforeend',`<div class="ag-ghdr ${c.cls}"><div class="zdot ${c.cls}"></div>Zone ${c.lbl}</div>`);
+    AG.filter(a=>a.zone===z).forEach(a=>{l.insertAdjacentHTML('beforeend',`<div class="ag-item"><input type="checkbox" id="chk-${a.id}" value="${a.id}" checked onchange="toggleAgCb(this)"><label for="chk-${a.id}">${a.name}</label></div>`);});
+  });
+}
+function toggleAg(){const p=document.getElementById('agpanel'),ar=document.getElementById('agarr');p.classList.toggle('open');ar.classList.toggle('open');}
+document.addEventListener('click',e=>{if(!document.getElementById('ags').contains(e.target)){document.getElementById('agpanel').classList.remove('open');document.getElementById('agarr').classList.remove('open');}});
+function toggleAgCb(cb){cb.checked?selAg.add(cb.value):selAg.delete(cb.value);updAgLbl();render();}
+function agAll(){AG.forEach(a=>{selAg.add(a.id);const c=document.getElementById('chk-'+a.id);if(c)c.checked=true;});updAgLbl();render();}
+function agNone(){selAg.clear();AG.forEach(a=>{const c=document.getElementById('chk-'+a.id);if(c)c.checked=false;});updAgLbl();render();}
+function agZone(z){AG.forEach(a=>{const c=document.getElementById('chk-'+a.id);if(!c)return;const on=a.zone===z;on?selAg.add(a.id):selAg.delete(a.id);c.checked=on;});updAgLbl();render();}
+function filterAg(q){document.querySelectorAll('#aglist .ag-item').forEach(i=>{i.style.display=i.querySelector('label').textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});}
+function updAgLbl(){const n=selAg.size;document.getElementById('aglbl').textContent=n===AG.length?`Toutes (${n})`:n===0?'Aucune':`${n} sél.`;}
+
+/* ══ HELPERS ══ */
+function gf(m){return AG.filter(a=>selAg.has(a.id)).map(a=>({...a,...(D[a.id]?.[m]||{total:0,rec:0,resa:0,note:0,qr:0})}));}
+function gfa(m){return gf(m).filter(a=>a.total>0);}
+function pm(m){const i=MONTHS.indexOf(m);return i>0?MONTHS[i-1]:null;}
+function avgN(m){const f=gfa(m).filter(a=>a.note>0);return f.length?+(f.reduce((s,a)=>s+a.note,0)/f.length).toFixed(2):0;}
+function sts(n,sz=13){const r=Math.round(Math.min(5,Math.max(0,n)));return `<span style="color:#c8950a;font-size:${sz}px;letter-spacing:1px">${'★'.repeat(r)}${'☆'.repeat(5-r)}</span>`;}
+function bdg(d){if(d===null||d===undefined)return '<span class="bdg b-flat">—</span>';if(d>0)return `<span class="bdg b-up">▲ +${Number.isInteger(d)?d:d.toFixed(1)}</span>`;if(d<0)return `<span class="bdg b-dn">▼ ${Number.isInteger(d)?d:d.toFixed(1)}</span>`;return '<span class="bdg b-flat">= 0</span>';}
+function nc(n){return n>=4.7?'#1a7a4a':n>=4.3?'#25a865':n>=4.0?'#b36200':n>=3.5?'#c0341a':'#8b0000';}
+function zb(z){return `<span class="zbdg ${z==='n'?'n':'s2'}">${z==='n'?'N':'S'}</span>`;}
+const CH={};function dc(id){if(CH[id]){CH[id].destroy();delete CH[id];}}
+
+/* ══ OVERVIEW ══ */
+function renderOverview(){
+  const selMonths=getSelectedMonths();
+  const m=selMonths[selMonths.length-1]; // mois courant = dernier sélectionné
+  curMonth=m;
+  const p=pm(m);
+
+  // Agréger sur tous les mois sélectionnés (ou juste le dernier si un seul)
+  const isMulti=selMonths.length>1;
+  let fa,tR,tRs,tQ,nA,pnA,nd,pR;
+
+  if(!isMulti){
+    fa=gfa(m);
+    if(!fa.length){document.getElementById('hero-band').innerHTML='<div class="empty" style="grid-column:1/-1">Aucune agence sélectionnée.</div>';return;}
+    tR=fa.reduce((s,a)=>s+a.rec,0);
+    tRs=fa.reduce((s,a)=>s+a.resa,0);
+    tQ=fa.reduce((s,a)=>s+a.qr,0);
+    nA=avgN(m);
+    pnA=p?avgN(p):null;
+    nd=pnA?+(nA-pnA).toFixed(2):null;
+    pR=p?gfa(p).reduce((s,a)=>s+a.rec,0):null;
+  } else {
+    // Multi-mois : on cumule les récoltés, résas, QR ; on moyenne les notes
+    fa=gfa(m);
+    if(!fa.length){document.getElementById('hero-band').innerHTML='<div class="empty" style="grid-column:1/-1">Aucune agence sélectionnée.</div>';return;}
+    tR=selMonths.reduce((s,mo)=>s+gfa(mo).reduce((ss,a)=>ss+a.rec,0),0);
+    tRs=selMonths.reduce((s,mo)=>s+gfa(mo).reduce((ss,a)=>ss+a.resa,0),0);
+    tQ=selMonths.reduce((s,mo)=>s+gfa(mo).reduce((ss,a)=>ss+a.qr,0),0);
+    const allN=selMonths.map(mo=>avgN(mo)).filter(n=>n>0);
+    nA=allN.length?+(allN.reduce((s,n)=>s+n,0)/allN.length).toFixed(2):0;
+    pnA=null;nd=null;pR=null;
+  }
+
+  const starsHtml=(n)=>{const full=Math.floor(n),half=(n-full)>=0.3,empty=5-full-(half?1:0);return `${'<span style="color:#c8950a;font-size:28px">★</span>'.repeat(full)}${half?'<span style="color:#c8950a;font-size:28px;opacity:.5">★</span>':''}${'<span style="color:#e5e1db;font-size:28px">★</span>'.repeat(empty)}`;};
+  const noteStyle=nA>=4.5?{bg:'#e8f5ee',col:'#1a7a4a'}:nA>=4.0?{bg:'#fdf3e3',col:'#b36200'}:{bg:'#fdecea',col:'#c0341a'};
+  const trendArrow=nd===null?'':(nd>0?`<span style="color:#1a7a4a;font-size:13px;font-weight:700">▲ +${nd.toFixed(2)}</span>`:(nd<0?`<span style="color:#c0341a;font-size:13px;font-weight:700">▼ ${nd.toFixed(2)}</span>`:'<span style="color:#7a7670;font-size:12px">= stable</span>'));
+  const periodLabel=isMulti?selMonths.map(ml).join(', '):ml(m);
+
+  document.getElementById('hero-band').innerHTML=`
+    <div style="text-align:center;padding:4px 20px 4px 0;border-right:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Note succursales</div>
+      <div style="font-family:'Syne',sans-serif;font-size:52px;font-weight:800;line-height:1;color:${noteStyle.col};background:${noteStyle.bg};padding:8px 16px;border-radius:12px">${nA.toFixed(2)}<span style="font-size:20px;font-weight:400;color:var(--ink3)">/5</span></div>
+      <div style="margin-top:6px">${starsHtml(nA)}</div>
+      <div style="margin-top:4px">${trendArrow}</div>
+    </div>
+    <div style="padding:0 20px;border-right:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Avis récoltés</div>
+      <div style="font-family:'Syne',sans-serif;font-size:38px;font-weight:700;color:var(--ink);line-height:1">${tR}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">${periodLabel}</div>
+      ${pR!==null?`<div style="margin-top:6px">${bdg(tR-pR)} vs ${ml(p)}</div>`:''}
+    </div>
+    <div style="padding:0 20px;border-right:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Rés. en ligne</div>
+      <div style="font-family:'Syne',sans-serif;font-size:38px;font-weight:700;color:var(--blue);line-height:1">${tRs}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">depuis le site web</div>
+    </div>
+    <div style="padding:0 20px;border-right:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Scans QR</div>
+      <div style="font-family:'Syne',sans-serif;font-size:38px;font-weight:700;color:#6d28d9;line-height:1">${tQ}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:4px">en agence</div>
+    </div>
+    <div style="padding:0 0 0 20px;text-align:right">
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Période</div>
+      <div style="font-family:'Syne',sans-serif;font-size:${isMulti?'14px':'22px'};font-weight:700;color:var(--ink)">${periodLabel}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:4px">${fa.length} agences</div>
+    </div>`;
+
+  dc('ne');CH['ne']=new Chart(document.getElementById('ch-ne'),{type:'line',data:{labels:MONTHS.map(ml),datasets:[{data:MONTHS.map(mo=>{const f2=gfa(mo).filter(a=>a.note>0);return f2.length?+(f2.reduce((s,a)=>s+a.note,0)/f2.length).toFixed(2):null;}),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.45,fill:true,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#e85d04':'rgba(232,93,4,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:3,max:5.2,ticks:{callback:v=>v.toFixed(1)},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  dc('ae');CH['ae']=new Chart(document.getElementById('ch-ae'),{type:'bar',data:{labels:MONTHS.map(ml),datasets:[{data:MONTHS.map(mo=>gfa(mo).reduce((s,a)=>s+a.rec,0)),backgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#1a7a4a':'#b7e4c7'),borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+  document.getElementById('cmp-lbl').textContent=(p?ml(p)+' → ':'')+ml(m);
+  dc('cn');
+  if(p){const sr=gfa(m).filter(a=>a.note>0).sort((a,b)=>b.note-a.note).slice(0,16);CH['cn']=new Chart(document.getElementById('ch-cn'),{type:'bar',data:{labels:sr.map(a=>a.name),datasets:[{label:ml(p),data:sr.map(a=>D[a.id]?.[p]?.note||0),backgroundColor:'rgba(0,0,0,.08)',borderRadius:4,borderSkipped:false},{label:ml(m),data:sr.map(a=>a.note),backgroundColor:'#e85d04',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{min:3,max:5.3,grid:{color:'rgba(0,0,0,.04)'}},x:{ticks:{font:{size:9},maxRotation:35},grid:{display:false}}}}});}
+
+  const qs=gfa(m).filter(a=>a.qr>0).sort((a,b)=>b.qr-a.qr).slice(0,12),qm=Math.max(...qs.map(a=>a.qr),1);
+  document.getElementById('qr-bars').innerHTML=qs.length?qs.map(a=>`<div class="qrbar"><span class="qrname" title="${a.name}">${a.name}</span><div class="qrtrack"><div class="qrfill" style="width:${Math.round(a.qr/qm*100)}%"></div></div><span class="qrval">${a.qr}</span></div>`).join(''):'<div class="empty">Aucun scan QR ce mois.</div>';
+
+  // ── RÉPARTITION PAR NOTE ──
+  // On se base sur les avis récoltés du mois par agence.
+  // Comme on n'a pas le détail 1-5★ dans les données hardcodées, on estime
+  // la répartition depuis la note moyenne + total récoltés via une distribution gaussienne centrée sur la note.
+  // Si tu importes des données avec détail 1-5★, tu peux les stocker dans d.stars={1:x,2:x,3:x,4:x,5:x}
+  const recFa=gfa(m).filter(a=>a.rec>0);
+  const totalRec=recFa.reduce((s,a)=>s+a.rec,0);
+  document.getElementById('dist-lbl').textContent=`${totalRec} avis · ${ml(m)}`;
+
+  // Agréger les étoiles si disponibles, sinon estimer
+  const stars=[0,0,0,0,0]; // index 0=1★ … 4=5★
+  recFa.forEach(a=>{
+    if(a.stars){
+      for(let i=0;i<5;i++)stars[i]+=(a.stars[i+1]||0);
+    } else {
+      // Estimation : distribution centrée sur la note arrondie, pondérée par rec
+      const n=Math.max(1,Math.min(5,Math.round(a.note)));
+      const weights=[0,0,0,0,0];
+      weights[n-1]=0.60;
+      if(n>1)weights[n-2]=0.20;if(n>2)weights[n-3]=0.08;
+      if(n<5)weights[n]=0.10;if(n<4)weights[n+1]=0.02;
+      const sum=weights.reduce((s,w)=>s+w,0);
+      for(let i=0;i<5;i++)stars[i]+=Math.round(a.rec*weights[i]/sum);
+    }
+  });
+  // Ajuster pour que le total corresponde exactement
+  const sTotal=stars.reduce((s,v)=>s+v,0);
+  if(sTotal!==totalRec&&sTotal>0){const diff=totalRec-sTotal;stars[4]+=diff;}
+
+  const starColors=['#ef4444','#f97316','#eab308','#84cc16','#22c55e'];
+  const starLabels=['1 ★','2 ★','3 ★','4 ★','5 ★'];
+  const maxS=Math.max(...stars,1);
+
+  document.getElementById('star-bars').innerHTML=
+    [4,3,2,1,0].map(i=>{
+      const pct=totalRec>0?Math.round(stars[i]/totalRec*100):0;
+      return `<div class="star-row">
+        <span class="star-lbl" style="color:${starColors[i]}">${starLabels[i]}</span>
+        <div class="star-track"><div class="star-fill" style="width:${Math.round(stars[i]/maxS*100)}%;background:${starColors[i]}"></div></div>
+        <span class="star-cnt">${stars[i]}</span>
+        <span class="star-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+
+  dc('donut');
+  CH['donut']=new Chart(document.getElementById('ch-donut'),{
+    type:'doughnut',
+    data:{
+      labels:starLabels,
+      datasets:[{data:stars,backgroundColor:starColors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,cutout:'68%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label} : ${ctx.raw} avis (${totalRec>0?Math.round(ctx.raw/totalRec*100):0}%)`}}
+      }
+    }
+  });
+
+  document.getElementById('tbl-zlbl').textContent=ml(m);
+  let tb='';
+  ['n','s'].forEach(z2=>{
+    const rows=gfa(m).filter(a=>a.zone===z2).sort((a,b)=>b.note-a.note);
+    if(!rows.length)return;
+    tb+=`<tr class="zhdr ${z2==='n'?'n':'s'}"><td colspan="9"><div class="zdot ${z2==='n'?'n':'s2'}" style="margin-right:6px;vertical-align:middle"></div>Zone ${z2==='n'?'Nord':'Sud'} — ${rows.length} agences</td></tr>`;
+    rows.forEach(a=>{const pd=p?D[a.id]?.[p]:null,nd2=pd?+(a.note-pd.note).toFixed(1):null,rd=pd?a.rec-pd.rec:null;tb+=`<tr class="${z2==='n'?'zrn':'zrs'}"><td>${zb(a.zone)}</td><td class="anm">${a.name}</td><td>${a.total}</td><td><strong>${a.rec}</strong></td><td>${bdg(rd)}</td><td>${a.resa}</td><td><span class="nval" style="color:${nc(a.note)}">${a.note>0?a.note.toFixed(1):'—'}</span></td><td>${bdg(nd2)}</td><td>${a.qr}</td></tr>`;});
+  });
+  document.getElementById('main-tbody').innerHTML=tb;
+}
+
+/* ══ RANKING — du meilleur au moins bon ══ */
+function renderRanking(){
+  const m=curMonth,p=pm(m),f=gfa(m).filter(a=>a.note>0).sort((a,b)=>b.note-a.note);
+  function rr(a,i,isTop){const pd=p?D[a.id]?.[p]:null,nd=pd?+(a.note-pd.note).toFixed(1):null;const cl=i===0?'gold':i===1?'silver':i===2?'bronze':isTop?'':'bot';return `<div class="rrow"><span class="rpos ${cl}">#${i+1}</span><span class="rname">${a.name}</span>${zb(a.zone)}<div class="rbw"><div class="rbar" style="width:${Math.round(a.note/5*100)}%;background:${nc(a.note)}"></div></div><span class="rnote" style="color:${nc(a.note)}">${a.note.toFixed(1)}</span>${bdg(nd)}</div>`;}
+  document.getElementById('top5').innerHTML=f.slice(0,5).map((a,i)=>rr(a,i,true)).join('');
+  document.getElementById('flop5').innerHTML=[...f].reverse().slice(0,5).map((a,i)=>rr(a,i,false)).join('');
+  const ba=gfa(m).sort((a,b)=>b.rec-a.rec);
+  document.getElementById('top5a').innerHTML=ba.slice(0,5).map((a,i)=>{const pd=p?D[a.id]?.[p]:null,nd=pd?a.rec-pd.rec:null;const cl=i===0?'gold':i===1?'silver':i===2?'bronze':'';return `<div class="rrow"><span class="rpos ${cl}">#${i+1}</span><span class="rname">${a.name}</span>${zb(a.zone)}<span class="rnote" style="color:var(--blue)">${a.rec}</span>${bdg(nd)}</div>`;}).join('');
+  const wp=gfa(m).filter(a=>a.note>0&&p&&D[a.id]?.[p]?.note>0).map(a=>({...a,prog:+(a.note-D[a.id][p].note).toFixed(1)})).sort((a,b)=>b.prog-a.prog);
+  document.getElementById('top5p').innerHTML=wp.slice(0,5).map((a,i)=>`<div class="rrow"><span class="rpos ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">#${i+1}</span><span class="rname">${a.name}</span>${zb(a.zone)}<span class="rnote" style="color:${nc(a.note)}">${a.note.toFixed(1)}</span>${bdg(a.prog)}</div>`).join('');
+  // Chart.js horizontal bar : le PREMIER item s'affiche EN HAUT
+  // → données en ordre décroissant (meilleur en tête) = meilleur en haut du graphique
+  const sr=f.slice(); // f déjà trié décroissant par note — meilleur en premier → en haut
+  const hh=Math.max(300,sr.length*32+60);
+  document.getElementById('ch-rn').parentElement.style.height=hh+'px';
+  dc('rn');CH['rn']=new Chart(document.getElementById('ch-rn'),{type:'bar',data:{labels:sr.map(a=>a.name),datasets:[{data:sr.map(a=>a.note),backgroundColor:sr.map(a=>a.zone==='n'?'rgba(20,85,164,.82)':'rgba(3,105,161,.7)'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:3,max:5.3,grid:{color:'rgba(0,0,0,.04)'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+  const sa=ba.slice(); // ba déjà trié décroissant par rec — meilleur en premier → en haut
+  const hh2=Math.max(300,sa.length*32+60);
+  document.getElementById('ch-ra').parentElement.style.height=hh2+'px';
+  dc('ra');CH['ra']=new Chart(document.getElementById('ch-ra'),{type:'bar',data:{labels:sa.map(a=>a.name),datasets:[{data:sa.map(a=>a.rec),backgroundColor:sa.map(a=>a.zone==='n'?'rgba(20,85,164,.82)':'rgba(3,105,161,.7)'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+}
+
+/* ══ COMPARE ══ */
+function doCompare(){
+  // Récupérer les mois sélectionnés pour A et B
+  const selA=[...document.getElementById('cmp-a').selectedOptions].map(o=>o.value);
+  const selB=[...document.getElementById('cmp-b').selectedOptions].map(o=>o.value);
+  if(!selA.length||!selB.length){toast('⚠ Sélectionnez au moins un mois pour chaque période.');return;}
+
+  // Agréger les données sur tous les mois sélectionnés
+  function agg(months){
+    const agences=gfa(months[0]); // agences actives (filtrées par selAg)
+    const allRecs=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.rec||0),0),0);
+    const allResa=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.resa||0),0),0);
+    const allQr=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.qr||0),0),0);
+    // Note = moyenne des notes moyennes mensuelles
+    const notes=months.map(mo=>{const f=AG.filter(a=>selAg.has(a.id)&&(D[a.id]?.[mo]?.note||0)>0);return f.length?f.reduce((s,a)=>s+(D[a.id][mo].note),0)/f.length:0;}).filter(n=>n>0);
+    const avgNote=notes.length?+(notes.reduce((s,n)=>s+n,0)/notes.length).toFixed(2):0;
+    return {rec:allRecs,resa:allResa,qr:allQr,note:avgNote};
+  }
+
+  const dA=agg(selA),dB=agg(selB);
+  const lblA=selA.length===1?ml(selA[0]):selA.map(ml).join('+');
+  const lblB=selB.length===1?ml(selB[0]):selB.map(ml).join('+');
+
+  function kpi(lbl,vA,vB,fmt){const d=vB-vA;return `<div class="kcard"><div class="klbl">${lbl}</div><div style="display:flex;gap:14px;align-items:baseline;margin-top:4px"><span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--ink3)">${fmt?fmt(vA):vA}</span><span style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700">${fmt?fmt(vB):vB}</span>${bdg(Number.isInteger(d)?d:+d.toFixed(2))}</div><div class="ksub"><span style="color:var(--ink3)">${lblA}</span><span style="margin:0 4px">→</span><strong>${lblB}</strong></div></div>`;}
+  document.getElementById('cmp-kpis').innerHTML=kpi('Note moy.',dA.note,dB.note,v=>v.toFixed(2))+kpi('Avis récoltés',dA.rec,dB.rec)+kpi('Réservations',dA.resa,dB.resa)+kpi('Scans QR',dA.qr,dB.qr);
+
+  // Graphiques par agence : on prend le dernier mois de chaque période pour les barres individuelles
+  const mA=selA[selA.length-1],mB=selB[selB.length-1];
+  const lbs=AG.filter(a=>selAg.has(a.id)).map(a=>a.name);
+  const gv=(n,mo,k)=>{const a=AG.find(x=>x.name===n);return a?D[a.id]?.[mo]?.[k]||0:0;};
+  dc('cnb');CH['cnb']=new Chart(document.getElementById('ch-cnb'),{type:'bar',data:{labels:lbs,datasets:[{label:lblA,data:lbs.map(n=>gv(n,mA,'note')),backgroundColor:'rgba(0,0,0,.1)',borderRadius:4,borderSkipped:false},{label:lblB,data:lbs.map(n=>gv(n,mB,'note')),backgroundColor:'#e85d04',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{min:3,max:5.3},x:{ticks:{font:{size:9},maxRotation:35},grid:{display:false}}}}});
+  dc('cab');CH['cab']=new Chart(document.getElementById('ch-cab'),{type:'bar',data:{labels:lbs,datasets:[{label:lblA,data:lbs.map(n=>gv(n,mA,'rec')),backgroundColor:'rgba(20,85,164,.2)',borderRadius:4,borderSkipped:false},{label:lblB,data:lbs.map(n=>gv(n,mB,'rec')),backgroundColor:'#1455a4',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{},x:{ticks:{font:{size:9},maxRotation:35},grid:{display:false}}}}});
+}
+
+/* ══ FICHE AGENCE ══ */
+function buildAgFocus(){
+  const s=document.getElementById('ag-focus');
+  ['n','s'].forEach(z=>{const g=document.createElement('optgroup');g.label='Zone '+(z==='n'?'Nord':'Sud');AG.filter(a=>a.zone===z).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.name;g.appendChild(o);});s.appendChild(g);});
+}
+function doAgency(){
+  const id=document.getElementById('ag-focus').value,ag=AG.find(a=>a.id===id),m=curMonth,p=pm(m);
+  const cur=D[id]?.[m]||{total:0,rec:0,resa:0,note:0,qr:0},prev=p?D[id]?.[p]:null;
+  document.getElementById('ag-krow').innerHTML=`
+    <div class="kcard cg"><div class="klbl">Total avis</div><div class="kval">${cur.total}</div></div>
+    <div class="kcard co"><div class="klbl">Récoltés ce mois</div><div class="kval">${cur.rec}</div><div class="ksub">${prev?bdg(cur.rec-prev.rec):''}</div></div>
+    <div class="kcard cb"><div class="klbl">Réservations</div><div class="kval">${cur.resa}</div></div>
+    <div class="kcard cg"><div class="klbl">Note</div><div class="kval" style="color:${nc(cur.note)}">${cur.note>0?cur.note.toFixed(1):'—'}</div><div class="ksub">${prev&&cur.note>0?bdg(+(cur.note-prev.note).toFixed(1)):''}</div></div>
+    <div class="kcard ca"><div class="klbl">Scans QR</div><div class="kval">${cur.qr}</div></div>
+    <div class="kcard"><div class="klbl">Zone</div><div class="kval" style="font-size:14px;margin-top:6px">${zb(ag.zone)}</div></div>`;
+  const mk=v=>MONTHS.map(mo=>D[id]?.[mo]?.[v]||null),lb=MONTHS.map(ml);
+  ['agn','aga','agr','agq'].forEach(dc);
+  const co=()=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}});
+  const notes=mk('note').filter(v=>v&&v>0);
+  CH['agn']=new Chart(document.getElementById('ch-agn'),{type:'line',data:{labels:lb,datasets:[{data:mk('note').map(v=>v>0?v:null),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#e85d04'}]},options:{...co(),scales:{y:{min:notes.length?Math.max(0,Math.min(...notes)-0.4):0,max:Math.min(5.2,(notes.length?Math.max(...notes):5)+0.2),grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  CH['aga']=new Chart(document.getElementById('ch-aga'),{type:'bar',data:{labels:lb,datasets:[{data:mk('rec'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#1a7a4a':'#b7e4c7'),borderRadius:4,borderSkipped:false}]},options:co()});
+  CH['agr']=new Chart(document.getElementById('ch-agr'),{type:'bar',data:{labels:lb,datasets:[{data:mk('resa'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#1455a4':'#b3cfe8'),borderRadius:4,borderSkipped:false}]},options:co()});
+  CH['agq']=new Chart(document.getElementById('ch-agq'),{type:'bar',data:{labels:lb,datasets:[{data:mk('qr'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#6d28d9':'#ddd6fe'),borderRadius:4,borderSkipped:false}]},options:co()});
+}
+
+/* ══ AVIS ══ */
+function revDrag(e,on){e.preventDefault();document.getElementById('rev-drop').classList.toggle('drag',!!on);}
+function revDrop(e){e.preventDefault();revDrag(e,0);const f=e.dataTransfer.files[0];if(f)handleRevFile(f);}
+function handleRevFile(file){
+  if(!file)return;
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){
+    // Fichier Excel Bridge
+    const r=new FileReader();
+    r.onload=ev=>parseRevsXLS(ev.target.result);
+    r.readAsArrayBuffer(file);
+  } else {
+    const r=new FileReader();
+    r.onload=e=>parseRevs(e.target.result);
+    r.readAsText(file,'UTF-8');
+  }
+}
+
+function parseRevsXLS(buf){
+  try{
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    // Convertir en CSV-like et appeler parseRevs
+    const csv=rows.map(r=>r.map(c=>String(c||'')).join(';')).join('\n');
+    parseRevs(csv);
+  }catch(e){toast('⚠ Erreur lecture Excel : '+e.message);}
+}
+
+function pdate(s){if(!s)return null;const m=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);if(!m)return null;let y=parseInt(m[3]);if(y<100)y+=2000;return new Date(y,parseInt(m[2])-1,parseInt(m[1]));}
+
+function matchAgence(agRaw){
+  if(!agRaw||agRaw.length<2)return null;
+  const q=agRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  // 1. Correspondance exacte
+  let found=AG.find(a=>{
+    const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    return n===q;
+  });
+  if(found)return found;
+  // 2. Le nom du fichier contient le nom de l'agence (ou vice-versa) — sur le premier segment avant "/"
+  const qBase=q.split('/')[0].trim();
+  found=AG.find(a=>{
+    const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const nBase=n.split('/')[0].trim();
+    return nBase===qBase || n===qBase || q===nBase;
+  });
+  if(found)return found;
+  // 3. Inclusion stricte (le nom de l'agence est contenu dans la valeur, min 4 chars)
+  found=AG.find(a=>{
+    const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const nBase=n.split('/')[0].trim();
+    return nBase.length>=4 && q.includes(nBase);
+  });
+  return found||null;
+}
+
+function parseRevs(raw){
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
+  const sep=raw.includes(';')?';':',';
+  const revs=[];
+  let skipped=0;
+
+  // Détecter la ligne d'en-tête
+  const isH=/agence|note|avis|date|commentaire|client/i.test(lines[0]);
+
+  for(let i=isH?1:0;i<lines.length;i++){
+    const p=lines[i].split(sep);
+    if(p.length<2)continue;
+
+    const agRaw=(p[0]||'').trim();
+    // Ignorer les lignes de total, sous-total, vide
+    if(!agRaw||/^total|^sous.?total|^moyenne|^---/i.test(agRaw))continue;
+
+    const noteRaw=(p[1]||'').toString().replace(',','.').trim();
+    const note=parseFloat(noteRaw)||0;
+
+    // La note DOIT être entre 1 et 5 inclus et être un vrai entier ou demi-point
+    if(note<1||note>5||isNaN(note))continue;
+    // Exclure les notes aberrantes comme 1.0 qui viendraient d'une colonne mal alignée
+    // (un total ou un nombre d'avis peut valoir 1-5 par hasard)
+
+    let date='',txt='';
+    if(p.length>=4){date=(p[2]||'').trim();txt=p.slice(3).join(sep).trim();}
+    else if(p.length===3){const p2=(p[2]||'').trim();/\d{1,2}\//.test(p2)?date=p2:txt=p2;}
+    txt=txt.replace(/^"|"$/g,'').trim();
+
+    // Matcher l'agence
+    const ma=matchAgence(agRaw);
+
+    // Si l'agence n'est pas reconnue ET que le texte est vide → très probablement une ligne parasite
+    if(!ma&&!txt&&!date){skipped++;continue;}
+
+    revs.push({
+      ag:ma?ma.name:agRaw,
+      agId:ma?ma.id:null,
+      zone:ma?ma.zone:null,
+      note,date,txt,
+      dateObj:pdate(date)
+    });
+  }
+
+  if(!revs.length){toast('⚠ Aucun avis valide trouvé. Vérifiez le format : Agence ; Note ; Date ; Commentaire');return;}
+
+  const msg=skipped>0?` (${skipped} ligne(s) ignorée(s))`:'';
+  document.getElementById('ai-load').classList.add('show');
+  document.getElementById('ai-msg').textContent=`Analyse de ${revs.length} avis…`;
+  setTimeout(()=>{
+    REVIEWS[curMonth]=revs;saveLS();
+    const n=revs.length,avg=+(revs.reduce((s,r)=>s+r.note,0)/n).toFixed(2);
+    const st=document.getElementById('rev-stats');st.style.display='flex';
+    st.innerHTML=`
+      <div class="revstat"><strong>${n}</strong>avis (${ml(curMonth)})</div>
+      <div class="revstat"><strong>${avg}</strong>note moy.</div>
+      <div class="revstat" style="color:var(--green)"><strong>${revs.filter(r=>r.note>=4).length}</strong>positifs</div>
+      <div class="revstat" style="color:var(--red)"><strong>${revs.filter(r=>r.note<=3).length}</strong>critiques</div>
+      ${skipped?`<div class="revstat" style="color:var(--amber)"><strong>${skipped}</strong>lignes ignorées</div>`:''}`;
+    applyRevFilters();
+    document.getElementById('ai-load').classList.remove('show');
+    toast(`✅ ${n} avis importés pour ${ml(curMonth)}${msg}`);
+  },600);
+}
+function applyRevFilters(){
+  // Mettre à jour le label du mois en haut de la page avis
+  const ml_lbl=document.getElementById('rev-month-lbl');
+  if(ml_lbl)ml_lbl.textContent=ml(curMonth);
+
+  const pool=REVIEWS[curMonth]||[];
+
+  // Stats propres au mois sélectionné
+  const st=document.getElementById('rev-stats');
+  if(!pool.length){
+    st.style.display='none';
+  } else {
+    const n=pool.length,avg=+(pool.reduce((s,r)=>s+r.note,0)/n).toFixed(2);
+    st.style.display='flex';
+    st.innerHTML=`<div class="revstat"><strong>${n}</strong>avis importés</div><div class="revstat"><strong>${avg}</strong>note moy.</div><div class="revstat" style="color:var(--green)"><strong>${pool.filter(r=>r.note>=4).length}</strong>positifs ≥ 4★</div><div class="revstat" style="color:var(--red)"><strong>${pool.filter(r=>r.note<=3).length}</strong>critiques ≤ 3★</div><div class="revstat" style="color:var(--ink3)"><strong>${ml(curMonth)}</strong></div>`;
+  }
+
+  if(!pool.length){
+    ['wc-pos','wc-neg'].forEach(id=>document.getElementById(id).innerHTML=`<span style="font-size:12px;color:var(--ink3)">Aucun avis pour ${ml(curMonth)}. Importez un fichier.</span>`);
+    document.getElementById('rev-top').innerHTML=`<div class="empty">Aucun avis pour ${ml(curMonth)}.</div>`;
+    document.getElementById('rev-bot').innerHTML=`<div class="empty">Aucun avis pour ${ml(curMonth)}.</div>`;
+    document.getElementById('all-rev-card').style.display='none';
+    document.getElementById('wc-pos-lbl').textContent='';document.getElementById('wc-neg-lbl').textContent='';
+    document.getElementById('rf-count').textContent='';return;
+  }
+  const zone=document.getElementById('sel-note')?.closest('.ctrl-rev')?.classList.contains('show')?'all':'all';
+  const note=document.getElementById('sel-note').value;
+  const search=(document.getElementById('sel-search').value||'').toLowerCase().trim();
+
+  const filtered=pool.filter(r=>{
+    if(r.agId&&!selAg.has(r.agId))return false;
+    if(note==='pos'&&r.note<4)return false;
+    if(note==='neg'&&r.note>3)return false;
+    if(note!=='all'&&note!=='pos'&&note!=='neg'&&r.note!==parseInt(note))return false;
+    if(search&&!r.txt.toLowerCase().includes(search)&&!r.ag.toLowerCase().includes(search))return false;
+    return true;
+  });
+  document.getElementById('rf-count').textContent=`${filtered.length} avis`;
+  renderRevPage(filtered);
+}
+function resetRevFilters(){document.getElementById('sel-note').value='all';document.getElementById('sel-search').value='';agAll();}
+function renderRevPage(revs){
+  if(!revs.length){['wc-pos','wc-neg'].forEach(id=>document.getElementById(id).innerHTML='<span style="font-size:12px;color:var(--ink3)">Aucun avis pour ces filtres.</span>');document.getElementById('rev-top').innerHTML='<div class="empty">Aucun résultat.</div>';document.getElementById('rev-bot').innerHTML='<div class="empty">Aucun résultat.</div>';document.getElementById('all-rev-card').style.display='none';document.getElementById('wc-pos-lbl').textContent='';document.getElementById('wc-neg-lbl').textContent='';return;}
+  const pos=revs.filter(r=>r.note>=4),neg=revs.filter(r=>r.note<=3);
+  document.getElementById('wc-pos-lbl').textContent=`${pos.length} avis`;
+  document.getElementById('wc-neg-lbl').textContent=`${neg.length} avis`;
+  document.getElementById('wc-pos').innerHTML=buildWC(pos.map(r=>r.txt).join(' '),'p',false);
+  document.getElementById('wc-neg').innerHTML=buildWC(neg.map(r=>r.txt).join(' '),'n',true);
+  const rc=r=>{const ag=AG.find(a=>a.id===r.agId);return `<div class="rev ${r.note>=4?'pos':'neg'}"><div class="revhdr"><span class="revagy">${r.ag}</span>${ag?zb(ag.zone):''}${r.date?`<span class="revdate">${r.date}</span>`:''}</div>${sts(r.note,12)}<div class="revtxt">${r.txt||'(pas de commentaire)'}</div></div>`;};
+  document.getElementById('rev-top').innerHTML=pos.slice().sort((a,b)=>b.note-a.note||b.txt.length-a.txt.length).slice(0,5).map(rc).join('')||'<div class="empty">Aucun avis positif.</div>';
+  document.getElementById('rev-bot').innerHTML=neg.slice().sort((a,b)=>a.note-b.note||b.txt.length-a.txt.length).slice(0,5).map(rc).join('')||'<div class="empty">Aucun avis critique.</div>';
+  document.getElementById('all-rev-card').style.display='block';
+  document.getElementById('all-rev-cnt').textContent=`${revs.length} avis — ${ml(curMonth)}`;
+  document.getElementById('all-rev-body').innerHTML=revs.map(r=>{const ag=AG.find(a=>a.id===r.agId);return `<tr><td>${ag?zb(ag.zone):'—'}</td><td style="font-weight:600;font-size:12px">${r.ag}</td><td>${sts(r.note,11)}</td><td style="white-space:nowrap;font-size:11px">${r.date||'—'}</td><td style="font-size:11px;color:var(--ink2)">${r.txt||'—'}</td></tr>`;}).join('');
+}
+
+/* ══ WORD CLOUD ══ */
+const STOP=new Set('le la les de du des un une au aux et en est à a ce qui que pour par sur avec pas plus très tout bien été nous ils je il elle se sa son ses leur leurs mon ma mes dans ne mais ou si comme même aussi trop peu cela cette ces lors entre après avant chez puis donc car or ni vous elles on y dont lorsque quand celui celle ceux jai avoir faire fait faut vais veux vraiment assez encore toujours jamais rien moins après mieux plutôt toute tous toutes'.split(' '));
+const GENERIC=new Set('agence location voiture véhicule cargo vehicule voitures véhicules agences louer loué louée service services client clients personnel équipe gens personne fois jour jours mois semaine heure heures endroit chose choses'.split(' '));
+const ADJ_POS=new Set('réactif réactive rapide efficace professionnel professionnelle disponible accueillant accueillante sympathique agréable excellent excellente parfait parfaite impeccable sérieux sérieuse compétent compétente attentionné attentionnée chaleureux chaleureuse généreux généreuse souriant souriante aimable flexible ponctuel ponctuelle simple facile pratique super génial géniale formidable chouette propre net nette satisfait satisfaite ravi ravie content contente heureux heureuse top recommande recommandé recommandée irréprochable merveilleux merveilleuse exceptionnel exceptionnelle'.split(' '));
+// Liste très large — adjectifs + noms de problèmes courants
+const ADJ_NEG=new Set('long longue lent lente mauvais mauvaise décevant décevante insuffisant insuffisante nul nulle médiocre désagréable incompétent incompétente absent absente injoignable inaccessible inexistant inexistante catastrophique horrible désastreux désastreuse problématique incorrect incorrecte faux fausse déplorable regrettable insatisfait insatisfaite frustrant frustrante inadapté inadaptée inefficace impoli impolie irrespectueux irrespectueuse pitoyable honteux honteuse scandaleux scandaleuse aberrant aberrante pénible compliqué difficile tardif tardive inexact erroné opaque flou incomplet incomplète décevant déçu déçue abandonné ignoré oublié bloqué perdu trompé arnaqué floué retard erreur problème souci difficulté manque oubli attente dysfonctionnement arnaque litige plainte silence'.split(' '));
+function norm(w){return w.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function buildWC(text,cls,negOnly){
+  if(!text.trim())return `<span style="font-size:12px;color:var(--ink3)">Pas assez de texte.</span>`;
+  const raw=text.toLowerCase().replace(/[^a-zàâäéèêëîïôöùûüç\s'-]/g,' ').split(/\s+/).filter(w=>w.length>2);
+  if(!raw.length)return `<span style="font-size:12px;color:var(--ink3)">Pas assez de texte.</span>`;
+  const orig={};raw.forEach(w=>{const n=norm(w);if(!orig[n]||orig[n].length<w.length)orig[n]=w;});
+  const scores={};
+  if(negOnly){
+    // 1er passage : mots négatifs reconnus
+    raw.forEach(w=>{const n=norm(w);if(ADJ_NEG.has(n))scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;});
+    // Fallback : si rien trouvé, tous les mots non-stop
+    if(Object.keys(scores).length===0){
+      raw.forEach(w=>{const n=norm(w);if(!STOP.has(n)&&!GENERIC.has(n)&&w.length>=4)scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;});
+    }
+    for(let i=0;i<raw.length-1;i++){const n1=norm(raw[i]),n2=norm(raw[i+1]);if((ADJ_NEG.has(n1)||ADJ_NEG.has(n2))&&!STOP.has(n1)&&!STOP.has(n2)&&!GENERIC.has(n1)&&!GENERIC.has(n2)){const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);scores[bi]=(scores[bi]||0)+1.5;}}
+  } else {
+    raw.forEach(w=>{const n=norm(w);if(ADJ_POS.has(n))scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;else if(!STOP.has(n)&&!GENERIC.has(n)&&w.length>=4)scores[orig[n]||w]=(scores[orig[n]||w]||0)+0.4;});
+    for(let i=0;i<raw.length-1;i++){const n1=norm(raw[i]),n2=norm(raw[i+1]);if((ADJ_POS.has(n1)||ADJ_POS.has(n2))&&!STOP.has(n1)&&!STOP.has(n2)&&!GENERIC.has(n1)&&!GENERIC.has(n2)&&raw[i].length>2&&raw[i+1].length>2){const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);scores[bi]=(scores[bi]||0)+1.8;if(scores[orig[n1]||raw[i]])scores[orig[n1]||raw[i]]=Math.max(0,(scores[orig[n1]||raw[i]]||0)-0.6);if(scores[orig[n2]||raw[i+1]])scores[orig[n2]||raw[i+1]]=Math.max(0,(scores[orig[n2]||raw[i+1]]||0)-0.6);}}
+  }
+  const sorted=Object.entries(scores).filter(([,c])=>c>0.3).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  if(!sorted.length)return `<span style="font-size:12px;color:var(--ink3)">${negOnly?'Aucun point négatif détecté.':'Pas assez de qualificatifs.'}</span>`;
+  const mx=sorted[0][1];
+  return sorted.map(([w,c])=>`<span class="ww ${cls}" style="font-size:${10+Math.round((c/mx)*13)}px" title="${Math.round(c)} mention(s)">${w}</span>`).join('');
+}
+
+/* ══ IMPORT STATS MODAL ══ */
+/* ══ IMPORT XLS/XLSX ══ */
+let impData=null;
+let impQueue={}; // {moisKey: {data:{agId:{...}}, label:'Mars 26', matched:N}}
+
+function openImpModal(){
+  document.getElementById('man-month-display').textContent=ml(curMonth);
+  buildManualTbl(curMonth);
+  document.getElementById('imp-modal').classList.add('open');
+  switchImpTab('xls',null);
+  renderImpQueue();
+}
+function closeImpModal(){
+  document.getElementById('imp-modal').classList.remove('open');
+  impData=null;
+  document.getElementById('imp-preview').style.display='none';
+  document.getElementById('imp-match').style.display='none';
+}
+function switchImpTab(tab,btn){
+  document.getElementById('imp-tab-xls').style.display=tab==='xls'?'block':'none';
+  document.getElementById('imp-tab-manual').style.display=tab==='manual'?'block':'none';
+  document.querySelectorAll('#imp-modal .itab').forEach((b,i)=>b.classList.toggle('on',(tab==='xls'&&i===0)||(tab==='manual'&&i===1)));
+}
+function impDrag(e,on){e.preventDefault();document.getElementById('imp-drop').classList.toggle('drag',!!on);}
+function impDrop(e){e.preventDefault();impDrag(e,0);const f=e.dataTransfer.files[0];if(f)handleImpFile(f);}
+function handleImpFile(file){
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='xls'||ext==='xlsx'){
+    const r=new FileReader();
+    r.onload=ev=>parseImpXLS(ev.target.result,file.name);
+    r.readAsArrayBuffer(file);
+  } else {
+    // Fallback CSV pour compatibilité
+    const r=new FileReader();
+    r.onload=ev=>parseImpCSV(ev.target.result,file.name);
+    r.readAsText(file,'UTF-8');
+  }
+}
+
+function parseImpXLS(buf,fname){
+  try{
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    if(!rows.length){toast('⚠ Fichier vide');return;}
+
+    // Détecter le mois depuis le nom du fichier ou le contenu
+    let detM=null;
+    const hay=(fname+' '+rows.flat().join(' ')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    // Normaliser MDET aussi pour la comparaison
+    Object.keys(MDET).forEach(k=>{
+      const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(hay.includes(kn))detM=MDET[k];
+    });
+    const tgtM=detM||curMonth;
+
+    // Parser les lignes
+    const result={};let matched=0;
+    const isH=/agence|total|avis|note|scan/i.test(String(rows[0]?.[0]||''));
+    for(let i=isH?1:0;i<rows.length;i++){
+      const p=rows[i].map(c=>String(c||'').trim());
+      if(!p[0]||p[0].toLowerCase().includes('total'))continue;
+      const ag=AG.find(a=>{
+        const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        const q=p[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return n.includes(q.split('/')[0].trim())||q.includes(n.split('/')[0].trim())||n===q;
+      });
+      if(!ag)continue;
+      result[ag.id]={
+        total:parseInt(p[1])||0,
+        rec:parseInt(p[2])||0,
+        resa:parseInt(p[3])||0,
+        note:parseFloat(p[4].replace(',','.'))||0,
+        qr:parseInt(p[5])||0
+      };
+      matched++;
+    }
+
+    // Préview
+    const pv=document.getElementById('imp-preview');
+    pv.style.display='block';
+    pv.textContent=rows.slice(0,6).map(r=>r.slice(0,7).join(' | ')).join('\n');
+
+    const me=document.getElementById('imp-match');
+    me.style.display='block';
+    if(matched>0){
+      me.style.color='var(--green)';
+      me.textContent=`✅ ${matched} agence(s) reconnue(s) → ${ml(tgtM)}`;
+      impData={month:tgtM,data:result,label:ml(tgtM),matched};
+    } else {
+      me.style.color='var(--red)';
+      me.textContent='⚠ Aucune agence reconnue — vérifiez les noms dans la colonne A.';
+      impData=null;
+    }
+  }catch(e){toast('⚠ Erreur lecture Excel : '+e.message);}
+}
+
+function parseImpCSV(raw,fname){
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);if(!lines.length){toast('⚠ Fichier vide');return;}
+  const sep=raw.includes(';')?';':',';
+  let detM=null;const hay=(fname+' '+raw).toLowerCase();Object.keys(MDET).forEach(k=>{if(hay.includes(k))detM=MDET[k];});
+  const tgtM=detM||curMonth;
+  const pv=document.getElementById('imp-preview');pv.style.display='block';pv.textContent=lines.slice(0,6).join('\n');
+  const result={};let matched=0;const isH=/agence|total|avis|note|scan/i.test(lines[0]);
+  for(let i=isH?1:0;i<lines.length;i++){
+    const p=lines[i].split(sep).map(s=>s.trim().replace(/"/g,''));if(p.length<3)continue;
+    const ag=AG.find(a=>{const n=a.name.toLowerCase(),q=p[0].toLowerCase();return n.includes(q.split('/')[0].trim())||q.includes(n.split('/')[0].trim());});
+    if(!ag)continue;
+    result[ag.id]={total:parseInt(p[1])||0,rec:parseInt(p[2])||0,resa:parseInt(p[3])||0,note:parseFloat((p[4]||'').replace(',','.'))||0,qr:parseInt(p[5])||0};matched++;
+  }
+  const me=document.getElementById('imp-match');me.style.display='block';
+  if(matched>0){me.style.color='var(--green)';me.textContent=`✅ ${matched} agence(s) reconnue(s) → ${ml(tgtM)}`;impData={month:tgtM,data:result,label:ml(tgtM),matched};}
+  else{me.style.color='var(--red)';me.textContent='⚠ Aucune agence reconnue.';impData=null;}
+}
+
+function renderImpQueue(){
+  const q=document.getElementById('imp-queue');
+  const months=Object.keys(impQueue);
+  if(!months.length){q.innerHTML='';return;}
+  q.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Mois prêts à enregistrer</div>`+
+    months.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--green-bg);border-radius:6px;margin-bottom:4px;font-size:12px">
+      <span style="color:var(--green)">✓</span>
+      <strong>${impQueue[m].label}</strong>
+      <span style="color:var(--ink3)">${impQueue[m].matched} agences</span>
+      <button onclick="removeFromQueue('${m}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink3);font-size:12px">✕</button>
+    </div>`).join('');
+}
+function removeFromQueue(m){delete impQueue[m];renderImpQueue();}
+
+function buildManualTbl(m){
+  document.getElementById('m-tbody').innerHTML=AG.map(ag=>{const d=D[ag.id]?.[m]||{total:0,rec:0,resa:0,note:0,qr:0};return `<tr><td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td><td>${zb(ag.zone)}</td><td><input type="number" id="mi-t-${ag.id}" value="${d.total}" min="0" step="1"></td><td><input type="number" id="mi-r-${ag.id}" value="${d.rec}" min="0" step="1"></td><td><input type="number" id="mi-rs-${ag.id}" value="${d.resa}" min="0" step="1"></td><td><input type="number" id="mi-n-${ag.id}" value="${d.note}" min="0" max="5" step="0.1"></td><td><input type="number" id="mi-q-${ag.id}" value="${d.qr}" min="0" step="1"></td></tr>`;}).join('');
+}
+
+function saveImp(){
+  const isXLS=document.getElementById('imp-tab-xls').style.display!=='none';
+  if(isXLS){
+    // Ajouter le fichier en cours à la queue si présent
+    if(impData&&Object.keys(impData.data).length){
+      impQueue[impData.month]=impData;
+      impData=null;
+      document.getElementById('imp-preview').style.display='none';
+      document.getElementById('imp-match').style.display='none';
+      document.getElementById('imp-fi').value='';
+      renderImpQueue();
+    }
+    // Enregistrer tous les mois en queue
+    const months=Object.keys(impQueue);
+    if(!months.length){toast('⚠ Aucune donnée à enregistrer.');return;}
+    months.forEach(m=>{
+      addMonth(m);
+      const p=pm(m);
+      Object.keys(impQueue[m].data).forEach(id=>{
+        if(!D[id])D[id]={};
+        const d=impQueue[m].data[id];
+        const pn=p?D[id]?.[p]?.note:null;
+        D[id][m]={...d,evo:pn&&d.note?+(d.note-pn).toFixed(1):0};
+      });
+    });
+    saveLS();
+    const nb=months.length;
+    impQueue={};
+    renderImpQueue();
+    closeImpModal();
+    render();
+    document.getElementById('imp-last').textContent=`Import : ${months.map(ml).join(', ')}`;
+    toast(`✅ ${nb} mois enregistrés`);
+  } else {
+    // Saisie manuelle
+    const m=curMonth;addMonth(m);const p=pm(m);
+    AG.forEach(ag=>{
+      if(!D[ag.id])D[ag.id]={};
+      const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,r=parseInt(document.getElementById(`mi-r-${ag.id}`)?.value)||0,rs=parseInt(document.getElementById(`mi-rs-${ag.id}`)?.value)||0,n=parseFloat(document.getElementById(`mi-n-${ag.id}`)?.value)||0,q=parseInt(document.getElementById(`mi-q-${ag.id}`)?.value)||0;
+      const pn=p?D[ag.id]?.[p]?.note:null;
+      D[ag.id][m]={total:t,rec:r,resa:rs,note:n,qr:q,evo:pn&&n?+(n-pn).toFixed(1):0};
+    });
+    saveLS();closeImpModal();render();
+    document.getElementById('imp-last').textContent=`Saisie : ${ml(m)}`;
+    toast(`✅ ${ml(m)} enregistré`);
+  }
+}
+
+/* ══ NAVIGATION ══ */
+function goPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
+  document.getElementById('page-'+name).classList.add('on');
+  if(btn)btn.classList.add('on');
+  curPage=name;
+  const isRev=name==='reviews',isOv=name==='overview';
+  document.querySelectorAll('.ctrl-rev').forEach(el=>el.classList.toggle('show',isRev));
+  document.getElementById('csep-imp').style.display=isOv?'block':'none';
+  document.getElementById('ctrl-imp-w').style.display=isOv?'flex':'none';
+  render();
+}
+function onCtrl(){
+  const sel=getSelectedMonths();
+  curMonth=sel[sel.length-1]; // mois "courant" = dernier sélectionné
+  render();
+}
+function render(){
+  if(curPage==='overview')renderOverview();
+  else if(curPage==='ranking')renderRanking();
+  else if(curPage==='compare')doCompare();
+  else if(curPage==='agency')doAgency();
+  else if(curPage==='reviews')applyRevFilters();
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+
+/* ══ INIT ══ */
+buildMonthSelects();
+buildAgList();
+buildAgFocus();
+document.querySelectorAll('.ctrl-rev').forEach(el=>el.classList.remove('show'));
+document.getElementById('csep-imp').style.display='block';
+document.getElementById('ctrl-imp-w').style.display='flex';
+render();
+</script>
+</body>
+</html>
