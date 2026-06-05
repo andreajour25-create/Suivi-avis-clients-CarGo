@@ -1447,42 +1447,5 @@ async function chargerAvis() {
 chargerVueGlobale();
 chargerAvis();
 
-</script><script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbz2tIRePJndOI_LECmC4a9KUsSheyelPavbXEIlg9SZUAtj1l3pJEozfPyab8DrnkW4/exec";
-
-async function loadVueGlobale() {
-
-  const res = await fetch(API_URL + "?sheet=VUE%20GLOBALE");
-  const data = await res.json();
-
-  console.log("DATA VUE GLOBALE :", data);
-
-  const tbody = document.getElementById("main-tbody");
-
-  tbody.innerHTML = "";
-
-  for (let i = 1; i < data.length; i++) {
-
-    const row = data[i];
-
-    tbody.innerHTML += `
-      <tr>
-        <td></td> <!-- Zone (si vide dans ton sheet) -->
-        <td>${row[0]}</td> <!-- Agence -->
-        <td>${row[2]}</td> <!-- Total avis -->
-        <td>${row[3]}</td> <!-- Récoltés ce mois -->
-        <td></td> <!-- Évol m-1 (à calculer plus tard) -->
-        <td></td> <!-- Résa en ligne -->
-        <td>${row[10]}</td> <!-- Note moyenne -->
-        <td></td> <!-- Évol note -->
-        <td></td> <!-- Scans QR -->
-      </tr>
-    `;
-  }
-}
-
-loadVueGlobale();
-
 </script></body>
 </html>
