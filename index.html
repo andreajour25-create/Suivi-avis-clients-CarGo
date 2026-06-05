@@ -172,7 +172,26 @@ input.fi{display:none}
 .page.on .card,.page.on .kcard{animation:fadeUp .22s ease both}
 .page.on .kcard:nth-child(2){animation-delay:.04s}.page.on .kcard:nth-child(3){animation-delay:.08s}
 .page.on .kcard:nth-child(4){animation-delay:.12s}.page.on .kcard:nth-child(5){animation-delay:.16s}
-/* Répartition notes */
+/* ── Réseaux Sociaux ── */
+.plat-ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af);color:#fff}
+.plat-fb{background:#1877f2;color:#fff}
+.plat-li{background:#0a66c2;color:#fff}
+.plat-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.soc-kcard{background:var(--white);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.soc-kval{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;line-height:1}
+.soc-klbl{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px}
+.soc-ksub{font-size:11px;color:var(--ink3)}
+.soc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.post-row{display:grid;grid-template-columns:90px 1fr 80px 70px 60px 60px 60px 60px 70px;gap:0;font-size:12px;border-bottom:1px solid var(--border);align-items:center}
+.post-row:last-child{border-bottom:none}
+.post-row>div{padding:8px 10px}
+.post-row:hover>div{background:var(--paper)}
+.post-hdr{font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px;background:var(--paper2)!important}
+.audience-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.aud-lbl{width:80px;font-size:11px;color:var(--ink2);flex-shrink:0}
+.aud-track{flex:1;height:8px;background:var(--paper2);border-radius:4px;overflow:hidden}
+.aud-fill{height:100%;border-radius:4px}
+.aud-val{width:50px;text-align:right;font-size:11px;font-weight:600;color:var(--ink2);flex-shrink:0}
 .star-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .star-lbl{width:24px;font-size:12px;font-weight:700;color:var(--ink2);text-align:right;flex-shrink:0}
 .star-track{flex:1;height:10px;background:var(--paper2);border-radius:5px;overflow:hidden}
@@ -196,6 +215,8 @@ input.fi{display:none}
     <button class="tnav"    onclick="goPage('reviews',this)">Avis &amp; Mots-clés</button>
   </nav>
   <div class="topactions">
+    <span id="db-status" style="font-size:11px;color:rgba(255,255,255,.4);white-space:nowrap"></span>
+    <button class="tbtn" onclick="openDbModal()" title="Configurer la base de données partagée">⚙ Base de données</button>
     <button class="tbtn acc" onclick="window.print()">⬇ Exporter</button>
   </div>
 </header>
@@ -361,7 +382,8 @@ input.fi{display:none}
   </div>
 </div>
 
-</main>
+<!-- RÉSEAUX SOCIAUX -->
+
 
 <!-- MODAL IMPORT STATS -->
 <div class="ov" id="imp-modal">
@@ -410,7 +432,75 @@ input.fi{display:none}
   </div>
 </div>
 
+<!-- MODAL CONFIG BASE DE DONNÉES -->
+<div class="ov" id="db-modal">
+  <div class="modal" style="max-width:640px">
+    <h2>⚙ Connexion Google Sheets</h2>
+    <p class="mdesc">Les données sont stockées dans un Google Sheet partagé, accessible à tous les utilisateurs sans login.</p>
+
+    <div style="background:var(--blue-bg);border-radius:var(--r3);padding:16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:var(--blue)">
+      <strong>Étapes de configuration (une seule fois) :</strong><br>
+      1. Ouvrez un <a href="https://sheets.google.com" target="_blank" style="color:var(--blue)">Google Sheet</a> → notez son ID dans l'URL<br>
+      2. Ouvrez <a href="https://script.google.com" target="_blank" style="color:var(--blue)">script.google.com</a> → Nouveau projet<br>
+      3. Collez le code ci-dessous, remplacez <code style="background:rgba(0,0,0,.08);padding:1px 4px;border-radius:3px">VOTRE_SHEET_ID</code> par l'ID de votre sheet<br>
+      4. Cliquez <strong>Déployer → Nouveau déploiement → Web App</strong><br>
+      &nbsp;&nbsp;&nbsp;• Exécuter en tant que : <strong>Moi</strong><br>
+      &nbsp;&nbsp;&nbsp;• Qui a accès : <strong>Tout le monde</strong><br>
+      5. Autorisez → copiez l'URL du déploiement → collez-la ci-dessous<br>
+      6. Partagez cette URL à vos collègues — ils font juste l'étape 7<br>
+      7. Chaque utilisateur colle l'URL ici et clique Connecter
+    </div>
+
+    <div style="background:var(--paper2);border-radius:var(--r3);padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Code Google Apps Script à copier</div>
+      <pre style="font-size:10px;font-family:monospace;color:var(--ink2);white-space:pre-wrap;line-height:1.6;max-height:180px;overflow-y:auto">function doGet(e){
+  var action=e.parameter.action;
+  var ss=SpreadsheetApp.openById('VOTRE_SHEET_ID');
+  var sheet=ss.getSheetByName('data')||ss.insertSheet('data');
+  if(action==='read'){
+    var val=sheet.getRange(1,1).getValue();
+    var data=val?JSON.parse(val):{};
+    return ContentService.createTextOutput(JSON.stringify({ok:true,data:data}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({error:'unknown action'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function doPost(e){
+  var body=JSON.parse(e.postData.contents);
+  if(body.action==='write'){
+    var ss=SpreadsheetApp.openById('VOTRE_SHEET_ID');
+    var sheet=ss.getSheetByName('data')||ss.insertSheet('data');
+    sheet.getRange(1,1).setValue(JSON.stringify(body.data));
+    return ContentService.createTextOutput(JSON.stringify({ok:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({error:'unknown action'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div class="clbl" style="margin-bottom:5px">URL du déploiement Apps Script</div>
+        <input id="cfg-url" type="text" placeholder="https://script.google.com/macros/s/..."
+          style="width:100%;border:1px solid var(--border2);border-radius:6px;padding:8px 12px;font-size:12px;font-family:'Inter',sans-serif;background:var(--paper);outline:none">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="mbtn ghost" onclick="testDbConfig()">🔍 Tester</button>
+        <span id="cfg-test-result" style="font-size:12px"></span>
+      </div>
+    </div>
+
+    <div class="macts">
+      <button class="mbtn ghost" onclick="closeDbModal()">Annuler</button>
+      <button class="mbtn grn" onclick="saveDbConfig()">💾 Connecter</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
+
+
 
 <script>
 /* ══ AGENCES ══ */
@@ -441,7 +531,46 @@ const AG=[
 /* ══ MOIS ══ */
 let MONTHS=['jan25','feb25','mar25','apr25','may25','jun25','jul25','aug25','sep25','oct25','nov25','dec25','jan26','feb26','mar26'];
 const ML={jan25:'Janv 25',feb25:'Fév 25',mar25:'Mars 25',apr25:'Avr 25',may25:'Mai 25',jun25:'Juin 25',jul25:'Juil 25',aug25:'Août 25',sep25:'Sept 25',oct25:'Oct 25',nov25:'Nov 25',dec25:'Déc 25',jan26:'Janv 26',feb26:'Fév 26',mar26:'Mars 26',apr26:'Avr 26',may26:'Mai 26',jun26:'Juin 26',jul26:'Juil 26',aug26:'Août 26',sep26:'Sept 26',oct26:'Oct 26',nov26:'Nov 26',dec26:'Déc 26'};
-const MDET={'janv-25':'jan25','fév-25':'feb25','fev-25':'feb25','mars-25':'mar25','avr-25':'apr25','mai-25':'may25','juin-25':'jun25','juil-25':'jul25','août-25':'aug25','aout-25':'aug25','sept-25':'sep25','oct-25':'oct25','nov-25':'nov25','déc-25':'dec25','dec-25':'dec25','janv-26':'jan26','fév-26':'feb26','fev-26':'feb26','mars-26':'mar26','avr-26':'apr26','mai-26':'may26','juin-26':'jun26','juil-26':'jul26','août-26':'aug26','sept-26':'sep26','oct-26':'oct26','nov-26':'nov26','déc-26':'dec26','dec-26':'dec26'};
+const MDET={
+  // avec tiret (format standard)
+  'janv-25':'jan25','jan-25':'jan25',
+  'fev-25':'feb25','fév-25':'feb25','fevr-25':'feb25',
+  'mars-25':'mar25',
+  'avr-25':'apr25','avril-25':'apr25',
+  'mai-25':'may25',
+  'juin-25':'jun25',
+  'juil-25':'jul25',
+  'aout-25':'aug25','août-25':'aug25',
+  'sept-25':'sep25','sep-25':'sep25',
+  'oct-25':'oct25',
+  'nov-25':'nov25',
+  'dec-25':'dec25','déc-25':'dec25',
+  'janv-26':'jan26','jan-26':'jan26',
+  'fev-26':'feb26','fév-26':'feb26','fevr-26':'feb26',
+  'mars-26':'mar26',
+  'avr-26':'apr26','avril-26':'apr26',
+  'mai-26':'may26',
+  'juin-26':'jun26',
+  'juil-26':'jul26',
+  'aout-26':'aug26','août-26':'aug26',
+  'sept-26':'sep26','sep-26':'sep26',
+  'oct-26':'oct26',
+  'nov-26':'nov26',
+  'dec-26':'dec26','déc-26':'dec26',
+  // avec espace ou underscore
+  'janv 25':'jan25','janv 26':'jan26',
+  'fev 25':'feb25','fev 26':'feb26',
+  'mars 25':'mar25','mars 26':'mar26',
+  'avril 25':'apr25','avril 26':'apr26','avr 25':'apr25','avr 26':'apr26',
+  'mai 25':'may25','mai 26':'may26',
+  'juin 25':'jun25','juin 26':'jun26',
+  'juil 25':'jul25','juil 26':'jul26',
+  'aout 25':'aug25','aout 26':'aug26',
+  'sept 25':'sep25','sept 26':'sep26',
+  'oct 25':'oct25','oct 26':'oct26',
+  'nov 25':'nov25','nov 26':'nov26',
+  'dec 25':'dec25','dec 26':'dec26',
+};
 function ml(m){return ML[m]||m;}
 
 /* ══ DONNÉES 100% ISSUES DU CSV ══
@@ -683,16 +812,121 @@ let D={
 /* ══ AVIS PAR MOIS ══ */
 let REVIEWS={};
 
-/* ══ LOCALSTORAGE v6 ══ */
-try{
-  const sv=JSON.parse(localStorage.getItem('cargo_v6')||'{}');
-  if(sv._m&&sv._m.length>MONTHS.length)MONTHS=sv._m;
-  if(sv._rev)REVIEWS=sv._rev;
-  // Fusionner les imports futurs (nouveaux mois) sans écraser les données hardcodées
-  AG.forEach(a=>{if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{if(!MONTHS.includes(m)||m>='apr26')D[a.id][m]=d;});});
-}catch(e){}
+/* ══════════════════════════════════════════════════════
+   BASE DE DONNÉES PARTAGÉE — Google Apps Script
+   Tous les utilisateurs lisent/écrivent le même script.
+   Configuration : cliquer sur ⚙ dans la barre du haut.
+   
+   SETUP (une seule fois) :
+   1. Ouvrez script.google.com → Nouveau projet
+   2. Collez le code Apps Script fourni dans la modale
+   3. Déployez comme Web App (accès : Tout le monde)
+   4. Copiez l'URL du déploiement ici
+══════════════════════════════════════════════════════ */
+const DB_KEY='cargo_gas_config';
+let GAS_URL='', DB_READY=false, _saveTimer=null;
 
-function saveLS(){const o={_m:MONTHS,_rev:REVIEWS};AG.forEach(a=>{o[a.id]=D[a.id];});localStorage.setItem('cargo_v6',JSON.stringify(o));}
+function loadDbConfig(){
+  try{const c=JSON.parse(localStorage.getItem(DB_KEY)||'{}');GAS_URL=c.url||'';}catch(e){}
+  DB_READY=!!GAS_URL;
+}
+
+async function dbLoad(){
+  if(!DB_READY){applyData({});return;}
+  showDbStatus('sync','Chargement…');
+  try{
+    const r=await fetch(GAS_URL+'?action=read',{method:'GET'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const json=await r.json();
+    if(json.error)throw new Error(json.error);
+    applyData(json.data||{});
+    showDbStatus('ok','Synchronisé · '+(new Date().toLocaleTimeString('fr')));
+  }catch(e){
+    showDbStatus('err','Erreur : '+e.message);
+    // Fallback localStorage
+    try{applyData(JSON.parse(localStorage.getItem('cargo_v6')||'{}'));}catch(e2){}
+  }
+}
+
+function applyData(sv){
+  if(!sv||typeof sv!=='object')return;
+  if(sv._m&&Array.isArray(sv._m)&&sv._m.length>MONTHS.length)MONTHS=sv._m;
+  if(sv._rev)REVIEWS=sv._rev;
+  AG.forEach(a=>{
+    if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{
+      if(!MONTHS.includes(m)||m>='apr26')D[a.id][m]=d;
+    });
+  });
+}
+
+function buildPayload(){
+  const o={_m:MONTHS,_rev:REVIEWS};
+  AG.forEach(a=>{o[a.id]=D[a.id];});
+  return o;
+}
+
+async function saveLS(){
+  const payload=buildPayload();
+  localStorage.setItem('cargo_v6',JSON.stringify(payload));
+  if(!DB_READY)return;
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>dbPush(payload),1000);
+}
+
+async function dbPush(payload){
+  showDbStatus('sync','Sauvegarde…');
+  try{
+    const r=await fetch(GAS_URL,{
+      method:'POST',
+      body:JSON.stringify({action:'write',data:payload})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const json=await r.json();
+    if(json.error)throw new Error(json.error);
+    showDbStatus('ok','Sauvegardé ✓ · '+(new Date().toLocaleTimeString('fr')));
+  }catch(e){showDbStatus('err','Erreur sauvegarde : '+e.message);}
+}
+
+function showDbStatus(state,msg){
+  const el=document.getElementById('db-status');
+  if(!el)return;
+  const icons={sync:'⟳',ok:'●',err:'⚠'};
+  const colors={sync:'var(--amber)',ok:'var(--green2)',err:'var(--red)'};
+  el.textContent=icons[state]+' '+msg;
+  el.style.color=colors[state];
+}
+
+function openDbModal(){
+  document.getElementById('cfg-url').value=GAS_URL;
+  document.getElementById('db-modal').classList.add('open');
+}
+function closeDbModal(){document.getElementById('db-modal').classList.remove('open');}
+
+function saveDbConfig(){
+  const url=document.getElementById('cfg-url').value.trim();
+  if(!url||!url.startsWith('https://')){toast('⚠ URL invalide.');return;}
+  GAS_URL=url;DB_READY=true;
+  localStorage.setItem(DB_KEY,JSON.stringify({url}));
+  closeDbModal();
+  toast('✅ Connecté — chargement des données…');
+  dbLoad().then(()=>{buildMonthSelects();render();});
+}
+
+function testDbConfig(){
+  const url=document.getElementById('cfg-url').value.trim();
+  if(!url){toast('⚠ Entrez une URL.');return;}
+  document.getElementById('cfg-test-result').textContent='Test en cours…';
+  fetch(url+'?action=read')
+    .then(r=>r.json())
+    .then(j=>{
+      if(j.error)throw new Error(j.error);
+      document.getElementById('cfg-test-result').innerHTML='<span style="color:var(--green)">✅ Connexion réussie !</span>';
+    })
+    .catch(e=>document.getElementById('cfg-test-result').innerHTML='<span style="color:var(--red)">⚠ '+e.message+'</span>');
+}
+
+loadDbConfig();
+try{applyData(JSON.parse(localStorage.getItem('cargo_v6')||'{}'));}catch(e){}
 
 let selAg=new Set(AG.map(a=>a.id));
 let curMonth=MONTHS[MONTHS.length-1];
@@ -726,11 +960,6 @@ function getSelectedMonths(){
   const ms=document.getElementById('sel-month');
   const sel=[...ms.selectedOptions].map(o=>o.value);
   return sel.length?sel:[MONTHS[MONTHS.length-1]];
-}
-function addMonth(m){
-  if(!MONTHS.includes(m)){MONTHS.push(m);AG.forEach(a=>{if(!D[a.id])D[a.id]={};if(!D[a.id][m])D[a.id][m]={total:0,rec:0,resa:0,note:0,qr:0};});buildMonthSelects();}
-  curMonth=m;
-  [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
 }
 
 /* ══ AGENCY DROPDOWN ══ */
@@ -999,14 +1228,30 @@ function handleRevFile(file){
   if(!file)return;
   const ext=(file.name.split('.').pop()||'').toLowerCase();
   if(ext==='xlsx'||ext==='xls'){
-    // Fichier Excel Bridge
     const r=new FileReader();
     r.onload=ev=>parseRevsXLS(ev.target.result);
     r.readAsArrayBuffer(file);
   } else {
+    // Lire en binaire d'abord pour détecter l'encodage
     const r=new FileReader();
-    r.onload=e=>parseRevs(e.target.result);
-    r.readAsText(file,'UTF-8');
+    r.onload=ev=>{
+      const bytes=new Uint8Array(ev.target.result);
+      // Détecter UTF-8 BOM
+      const hasBOM=bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF;
+      // Tenter décodage UTF-8 — si ça échoue ou produit des caractères de remplacement, utiliser latin-1
+      let txt='';
+      try{
+        const dec=new TextDecoder('utf-8',{fatal:true});
+        txt=dec.decode(bytes);
+        if(hasBOM)txt=txt.slice(1);
+      }catch(e){
+        // UTF-8 invalide → windows-1252 (latin-1 étendu, encodage par défaut Windows/Excel FR)
+        const dec=new TextDecoder('windows-1252');
+        txt=dec.decode(bytes);
+      }
+      parseRevs(txt);
+    };
+    r.readAsArrayBuffer(file);
   }
 }
 
@@ -1025,26 +1270,51 @@ function pdate(s){if(!s)return null;const m=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/
 
 function matchAgence(agRaw){
   if(!agRaw||agRaw.length<2)return null;
-  const q=agRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  // 1. Correspondance exacte
-  let found=AG.find(a=>{
-    const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    return n===q;
-  });
-  if(found)return found;
-  // 2. Le nom du fichier contient le nom de l'agence (ou vice-versa) — sur le premier segment avant "/"
-  const qBase=q.split('/')[0].trim();
-  found=AG.find(a=>{
+
+  // Table de correspondance exacte pour les noms Bridge
+  const BRIDGE_MAP={
+    'cargo location de vehicules ludres':       'ludres',
+    'cargo location de vehicules chambery':     'chambery',
+    'cargo location de vehicules fecamp':       'fecamp',
+    'cargo location de vehicules annecy':       'annecy',
+    'cargo location de vehicules sallanches':   'sallanches',
+    'cargo location de vehicules thonon':       'thonon',
+    'cargo location de vehicules vitry sur seine':'vitry',
+    'cargo location de vehicules pont de claix':'pontclaix',
+    'cargo location de vehicules - cessy/gex':  'gex',
+    'cargo location de vehicules - ville la grand':'annemasse',
+    'cargo location de vehicules antibes':      'antibes',
+    'cargo location de vehicules voglans':      'voglans',
+    'cargo voglans - location de vehicules':    'voglans',
+    'cargo albertville - rue piddat':           'albertville',
+    'cargo albertville':                        'albertville',
+    'cargo location de vehicules genas':        'genas',
+    'cargo location de vehicules woippy':       'woippy',
+    'cargo location de vehicules lyon':         'lyon',
+    'cargo location de vehicules crolles':      'crolles',
+    'cargo location de vehicules saint jean de maurienne':'saintjean',
+    'cargo location de vehicules seynod':       'seynod',
+  };
+
+  // Normaliser : minuscules, sans accents, sans guillemets
+  const q=agRaw.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/['"]/g,'').trim();
+
+  // 1. Table Bridge exacte
+  if(BRIDGE_MAP[q])return AG.find(a=>a.id===BRIDGE_MAP[q])||null;
+
+  // 2. Recherche partielle dans la table Bridge
+  for(const [key,id] of Object.entries(BRIDGE_MAP)){
+    if(q.includes(key)||key.includes(q))return AG.find(a=>a.id===id)||null;
+  }
+
+  // 3. Correspondance directe avec les noms du dashboard
+  const found=AG.find(a=>{
     const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const nBase=n.split('/')[0].trim();
-    return nBase===qBase || n===qBase || q===nBase;
-  });
-  if(found)return found;
-  // 3. Inclusion stricte (le nom de l'agence est contenu dans la valeur, min 4 chars)
-  found=AG.find(a=>{
-    const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const nBase=n.split('/')[0].trim();
-    return nBase.length>=4 && q.includes(nBase);
+    const qBase=q.split('/')[0].trim();
+    return n===q||nBase===qBase||q.includes(nBase)||(nBase.length>=4&&q.includes(nBase));
   });
   return found||null;
 }
@@ -1052,51 +1322,31 @@ function matchAgence(agRaw){
 function parseRevs(raw){
   const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
   const sep=raw.includes(';')?';':',';
-  const revs=[];
-  let skipped=0;
-
-  // Détecter la ligne d'en-tête
-  const isH=/agence|note|avis|date|commentaire|client/i.test(lines[0]);
+  const revs=[];let skipped=0;
+  const isH=/point de vente|agence|note|avis|date/i.test(lines[0]);
 
   for(let i=isH?1:0;i<lines.length;i++){
     const p=lines[i].split(sep);
     if(p.length<2)continue;
-
     const agRaw=(p[0]||'').trim();
-    // Ignorer les lignes de total, sous-total, vide
-    if(!agRaw||/^total|^sous.?total|^moyenne|^---/i.test(agRaw))continue;
-
+    if(!agRaw)continue;
+    // Vérifier que c'est bien une ligne d'avis :
+    // - la note (col 1) doit être un entier de 1 à 5
+    // - la colonne agence doit contenir "cargo" ou matcher une agence connue
     const noteRaw=(p[1]||'').toString().replace(',','.').trim();
-    const note=parseFloat(noteRaw)||0;
-
-    // La note DOIT être entre 1 et 5 inclus et être un vrai entier ou demi-point
-    if(note<1||note>5||isNaN(note))continue;
-    // Exclure les notes aberrantes comme 1.0 qui viendraient d'une colonne mal alignée
-    // (un total ou un nombre d'avis peut valoir 1-5 par hasard)
-
-    let date='',txt='';
-    if(p.length>=4){date=(p[2]||'').trim();txt=p.slice(3).join(sep).trim();}
-    else if(p.length===3){const p2=(p[2]||'').trim();/\d{1,2}\//.test(p2)?date=p2:txt=p2;}
-    txt=txt.replace(/^"|"$/g,'').trim();
-
-    // Matcher l'agence
+    const note=parseFloat(noteRaw);
+    const isValidNote=!isNaN(note)&&note>=1&&note<=5&&note===Math.round(note);
+    const q=agRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const hasCargoOrAgence=q.includes('cargo')||q.includes('location')||!!matchAgence(agRaw);
+    if(!isValidNote||!hasCargoOrAgence){skipped++;continue;}
+    // Colonnes Bridge : Point de vente ; Note ; Date ; Nom client ; Contenu ; Réponse...
+    const date=(p[2]||'').trim();
+    const txt=(p.length>=5?p[4]:p.length>=4?p[3]:'').replace(/^"|"$/g,'').trim();
     const ma=matchAgence(agRaw);
-
-    // Si l'agence n'est pas reconnue ET que le texte est vide → très probablement une ligne parasite
-    if(!ma&&!txt&&!date){skipped++;continue;}
-
-    revs.push({
-      ag:ma?ma.name:agRaw,
-      agId:ma?ma.id:null,
-      zone:ma?ma.zone:null,
-      note,date,txt,
-      dateObj:pdate(date)
-    });
+    revs.push({ag:ma?ma.name:agRaw,agId:ma?ma.id:null,zone:ma?ma.zone:null,note,date,txt,dateObj:pdate(date)});
   }
 
-  if(!revs.length){toast('⚠ Aucun avis valide trouvé. Vérifiez le format : Agence ; Note ; Date ; Commentaire');return;}
-
-  const msg=skipped>0?` (${skipped} ligne(s) ignorée(s))`:'';
+  if(!revs.length){toast('⚠ Aucun avis valide trouvé. Vérifiez le format Bridge.');return;}
   document.getElementById('ai-load').classList.add('show');
   document.getElementById('ai-msg').textContent=`Analyse de ${revs.length} avis…`;
   setTimeout(()=>{
@@ -1107,11 +1357,10 @@ function parseRevs(raw){
       <div class="revstat"><strong>${n}</strong>avis (${ml(curMonth)})</div>
       <div class="revstat"><strong>${avg}</strong>note moy.</div>
       <div class="revstat" style="color:var(--green)"><strong>${revs.filter(r=>r.note>=4).length}</strong>positifs</div>
-      <div class="revstat" style="color:var(--red)"><strong>${revs.filter(r=>r.note<=3).length}</strong>critiques</div>
-      ${skipped?`<div class="revstat" style="color:var(--amber)"><strong>${skipped}</strong>lignes ignorées</div>`:''}`;
+      <div class="revstat" style="color:var(--red)"><strong>${revs.filter(r=>r.note<=3).length}</strong>critiques</div>`;
     applyRevFilters();
     document.getElementById('ai-load').classList.remove('show');
-    toast(`✅ ${n} avis importés pour ${ml(curMonth)}${msg}`);
+    toast(`✅ ${n} avis importés pour ${ml(curMonth)}`);
   },600);
 }
 function applyRevFilters(){
@@ -1384,6 +1633,9 @@ function saveImp(){
 }
 
 /* ══ NAVIGATION ══ */
+/* ══════════════════════════════════════════
+   RÉSEAUX SOCIAUX — import CSV Bridge social
+══════════════════════════════════════════ */
 function goPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('on'));
@@ -1398,7 +1650,7 @@ function goPage(name,btn){
 }
 function onCtrl(){
   const sel=getSelectedMonths();
-  curMonth=sel[sel.length-1]; // mois "courant" = dernier sélectionné
+  curMonth=sel[sel.length-1];
   render();
 }
 function render(){
@@ -1411,6 +1663,13 @@ function render(){
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
 
 /* ══ INIT ══ */
+// Charger la DB partagée au démarrage puis toutes les 60s
+window.addEventListener('load',()=>{
+  if(DB_READY){
+    dbLoad().then(()=>{buildMonthSelects();render();});
+    setInterval(()=>{if(DB_READY)dbLoad().then(()=>{buildMonthSelects();render();});},60000);
+  }
+});
 buildMonthSelects();
 buildAgList();
 buildAgFocus();
@@ -1419,33 +1678,5 @@ document.getElementById('csep-imp').style.display='block';
 document.getElementById('ctrl-imp-w').style.display='flex';
 render();
 </script>
-<script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbz2tIRePJndOI_LECmC4a9KUsSheyelPavbXEIlg9SZUAtj1l3pJEozfPyab8DrnkW4/exec";
-
-// VUE GLOBALE
-async function chargerVueGlobale() {
-  const res = await fetch(API_URL + "?sheet=VUE%20GLOBALE");
-  const data = await res.json();
-
-  console.log("VUE GLOBALE :", data);
-
-  return data;
-}
-
-// AVIS & MOTS CLES
-async function chargerAvis() {
-  const res = await fetch(API_URL + "?sheet=AVIS%20%26%20MOTS%20CLES");
-  const data = await res.json();
-
-  console.log("AVIS & MOTS CLES :", data);
-
-  return data;
-}
-
-// Lancement
-chargerVueGlobale();
-chargerAvis();
-
-</script></body>
+</body>
 </html>
