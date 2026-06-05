@@ -1419,5 +1419,21 @@ document.getElementById('csep-imp').style.display='block';
 document.getElementById('ctrl-imp-w').style.display='flex';
 render();
 </script>
-</body>
+<script>
+const API_URL = "TON_URL_APPS_SCRIPT";
+
+fetch(API_URL)
+  .then(response => response.json())
+  .then(data => {
+    console.log("Données Google Sheets :", data);
+
+    // Exemple : affichage simple
+    data.forEach(item => {
+      console.log(item.Agence, item.Note, item.Mois);
+    });
+
+    // 👉 ici tu connectes à ton dashboard
+  })
+  .catch(error => console.error("Erreur API :", error));
+</script></body>
 </html>
