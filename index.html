@@ -1420,20 +1420,23 @@ document.getElementById('ctrl-imp-w').style.display='flex';
 render();
 </script>
 <script>
-const API_URL = "TON_URL_APPS_SCRIPT";
 
-fetch(API_URL)
-  .then(response => response.json())
-  .then(data => {
-    console.log("Données Google Sheets :", data);
+const API_URL = "https://script.google.com/macros/s/AKfycbz2tIRePJndOI_LECmC4a9KUsSheyelPavbXEIlg9SZUAtj1l3pJEozfPyab8DrnkW4/exec";
 
-    // Exemple : affichage simple
-    data.forEach(item => {
-      console.log(item.Agence, item.Note, item.Mois);
-    });
+async function chargerVueGlobale() {
+  const res = await fetch(API_URL + "?sheet=VUE%20GLOBALE");
+  const data = await res.json();
+  console.log("VUE GLOBALE :", data);
+}
 
-    // 👉 ici tu connectes à ton dashboard
-  })
-  .catch(error => console.error("Erreur API :", error));
+async function chargerAvis() {
+  const res = await fetch(API_URL + "?sheet=AVIS%20%26%20MOTS%20CLES");
+  const data = await res.json();
+  console.log("AVIS :", data);
+}
+
+chargerVueGlobale();
+chargerAvis();
+
 </script></body>
 </html>
