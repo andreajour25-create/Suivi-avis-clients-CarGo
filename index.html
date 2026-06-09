@@ -300,7 +300,7 @@ input.fi{display:none}
   </div>
   <div class="card">
     <div class="sttl">Toutes les agences <span class="stag" id="tbl-zlbl"></span></div>
-    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Total avis</th><th>Récoltés ce mois</th><th>Évol. m-1</th><th>Rés. en ligne</th><th>Note moy.</th><th>Évol. note</th><th>Scans QR</th></tr></thead><tbody id="main-tbody"></tbody></table></div>
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Total avis</th><th>Récoltés ce mois</th><th>Évol. m-1</th><th>Note moy.</th><th>Évol. note</th><th>Scans QR</th></tr></thead><tbody id="main-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -349,10 +349,7 @@ input.fi{display:none}
     <div class="card"><div class="sttl">Historique note</div><div class="ch"><canvas id="ch-agn"></canvas></div></div>
     <div class="card"><div class="sttl">Historique avis récoltés</div><div class="ch"><canvas id="ch-aga"></canvas></div></div>
   </div>
-  <div class="g2">
-    <div class="card"><div class="sttl">Historique réservations en ligne</div><div class="ch"><canvas id="ch-agr"></canvas></div></div>
-    <div class="card"><div class="sttl">Historique scans QR</div><div class="ch"><canvas id="ch-agq"></canvas></div></div>
-  </div>
+  <div class="card" style="margin-bottom:16px"><div class="sttl">Historique scans QR</div><div class="ch"><canvas id="ch-agq"></canvas></div></div>
 </div>
 
 <!-- AVIS & MOTS-CLÉS -->
@@ -399,7 +396,7 @@ input.fi{display:none}
     <div id="imp-tab-xls">
       <div class="fmthelp">
         <strong>Format attendu (colonnes dans cet ordre) :</strong><br>
-        <code>Agence · Total avis · Récoltés · Réservations · Note moy. · Scans QR</code><br>
+        <code>Agence · Total avis · Récoltés · Note moy. · Scans QR</code><br>
         Le mois est détecté depuis le nom du fichier (ex : <code>mars-26.xlsx</code>) ou la 1ère ligne.
       </div>
       <!-- Zone de dépôt -->
@@ -420,7 +417,7 @@ input.fi{display:none}
     <div id="imp-tab-manual" style="display:none">
       <div style="margin-bottom:10px;font-size:12px;color:var(--ink2)">Mois : <strong id="man-month-display"></strong></div>
       <div style="overflow-x:auto"><table class="dtbl">
-        <thead><tr><th>Agence</th><th>Zone</th><th>Total</th><th>Récoltés</th><th>Rés.</th><th>Note</th><th>QR</th></tr></thead>
+        <thead><tr><th>Agence</th><th>Zone</th><th>Total</th><th>Récoltés</th><th>Note</th><th>QR</th></tr></thead>
         <tbody id="m-tbody"></tbody>
       </table></div>
     </div>
@@ -850,11 +847,29 @@ async function dbLoad(){
 
 function applyData(sv){
   if(!sv||typeof sv!=='object')return;
-  if(sv._m&&Array.isArray(sv._m)&&sv._m.length>MONTHS.length)MONTHS=sv._m;
-  if(sv._rev)REVIEWS=sv._rev;
+  // Mois : ajouter les nouveaux mois sans réduire la liste
+  if(sv._m&&Array.isArray(sv._m)){
+    sv._m.forEach(m=>{if(!MONTHS.includes(m))MONTHS.push(m);});
+  }
+  // Avis : FUSIONNER (ne pas écraser) — conserver les avis déjà en mémoire
+  if(sv._rev&&typeof sv._rev==='object'){
+    Object.entries(sv._rev).forEach(([m,revs])=>{
+      if(revs&&revs.length>0)REVIEWS[m]=revs;
+    });
+  }
+  // Stats agences : n'écraser les données hardcodées que pour les mois importés (apr26+)
+  // Liste des mois hardcodés dans le code source
+  const HARDCODED=['jan25','feb25','mar25','apr25','may25','jun25','jul25','aug25',
+                   'sep25','oct25','nov25','dec25','jan26','feb26','mar26'];
   AG.forEach(a=>{
     if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{
-      if(!MONTHS.includes(m)||m>='apr26')D[a.id][m]=d;
+      // Écraser si : mois non hardcodé OU données plus complètes (note > 0)
+      if(!HARDCODED.includes(m)){
+        D[a.id][m]=d;
+      } else if(d&&d.note>0&&d.total>0){
+        // Pour les mois hardcodés, n'écraser que si les données importées semblent valides
+        D[a.id][m]=d;
+      }
     });
   });
 }
@@ -867,10 +882,34 @@ function buildPayload(){
 
 async function saveLS(){
   const payload=buildPayload();
+  // Sauvegarde IMMÉDIATE dans localStorage — données jamais perdues même si la DB est lente
   localStorage.setItem('cargo_v6',JSON.stringify(payload));
   if(!DB_READY)return;
+  // Sauvegarde DB en différé (debounce 1s pour grouper les appels rapprochés)
   clearTimeout(_saveTimer);
-  _saveTimer=setTimeout(()=>dbPush(payload),1000);
+  _saveTimer=setTimeout(async()=>{
+    await dbPush(payload);
+  },1000);
+}
+
+// Chargement initial : localStorage EN PREMIER (affichage immédiat),
+// puis DB partagée par-dessus (peut apporter des données d'autres utilisateurs)
+function loadInitialData(){
+  // 1. localStorage en priorité (données locales — toujours dispo)
+  try{
+    const local=JSON.parse(localStorage.getItem('cargo_v6')||'{}');
+    applyData(local);
+  }catch(e){}
+  // 2. DB partagée ensuite (peut enrichir avec données d'autres users)
+  if(DB_READY){
+    dbLoad().then(()=>{buildMonthSelects();render();});
+    // Resync toutes les 60s mais seulement si pas de sauvegarde en cours
+    setInterval(()=>{
+      if(DB_READY&&!_saveTimer){
+        dbLoad().then(()=>{buildMonthSelects();render();});
+      }
+    },60000);
+  }
 }
 
 async function dbPush(payload){
@@ -926,7 +965,7 @@ function testDbConfig(){
 }
 
 loadDbConfig();
-try{applyData(JSON.parse(localStorage.getItem('cargo_v6')||'{}'));}catch(e){}
+// Les données sont chargées dans loadInitialData() appelé dans INIT
 
 let selAg=new Set(AG.map(a=>a.id));
 let curMonth=MONTHS[MONTHS.length-1];
@@ -1071,30 +1110,36 @@ function renderOverview(){
 
   // ── RÉPARTITION PAR NOTE ──
   // On se base sur les avis récoltés du mois par agence.
-  // Comme on n'a pas le détail 1-5★ dans les données hardcodées, on estime
-  // la répartition depuis la note moyenne + total récoltés via une distribution gaussienne centrée sur la note.
-  // Si tu importes des données avec détail 1-5★, tu peux les stocker dans d.stars={1:x,2:x,3:x,4:x,5:x}
   const recFa=gfa(m).filter(a=>a.rec>0);
   const totalRec=recFa.reduce((s,a)=>s+a.rec,0);
-  document.getElementById('dist-lbl').textContent=`${totalRec} avis · ${ml(m)}`;
 
-  // Agréger les étoiles si disponibles, sinon estimer
-  const stars=[0,0,0,0,0]; // index 0=1★ … 4=5★
+  // Vérifier si on a de vraies données d'étoiles importées
+  const hasRealStars=recFa.some(a=>a.stars&&Object.values(a.stars).some(v=>v>0));
+  document.getElementById('dist-lbl').textContent=
+    `${totalRec} avis · ${ml(m)}${hasRealStars?' · données réelles':' · estimation'}`;
+
+  // stars[0]=1★ … stars[4]=5★
+  const stars=[0,0,0,0,0];
   recFa.forEach(a=>{
-    if(a.stars){
-      for(let i=0;i<5;i++)stars[i]+=(a.stars[i+1]||0);
+    if(a.stars&&(a.stars[1]||a.stars[2]||a.stars[3]||a.stars[4]||a.stars[5])){
+      // Vraies données importées depuis le fichier Excel
+      stars[0]+=(a.stars[1]||0);
+      stars[1]+=(a.stars[2]||0);
+      stars[2]+=(a.stars[3]||0);
+      stars[3]+=(a.stars[4]||0);
+      stars[4]+=(a.stars[5]||0);
     } else {
-      // Estimation : distribution centrée sur la note arrondie, pondérée par rec
+      // Estimation depuis la note moyenne
       const n=Math.max(1,Math.min(5,Math.round(a.note)));
-      const weights=[0,0,0,0,0];
-      weights[n-1]=0.60;
-      if(n>1)weights[n-2]=0.20;if(n>2)weights[n-3]=0.08;
-      if(n<5)weights[n]=0.10;if(n<4)weights[n+1]=0.02;
-      const sum=weights.reduce((s,w)=>s+w,0);
-      for(let i=0;i<5;i++)stars[i]+=Math.round(a.rec*weights[i]/sum);
+      const w=[0,0,0,0,0];
+      w[n-1]=0.60;
+      if(n>1)w[n-2]=0.20; if(n>2)w[n-3]=0.08;
+      if(n<5)w[n]=0.10;   if(n<4)w[n+1]=0.02;
+      const sum=w.reduce((s,v)=>s+v,0);
+      for(let i=0;i<5;i++)stars[i]+=Math.round(a.rec*(w[i]/sum));
     }
   });
-  // Ajuster pour que le total corresponde exactement
+  // Ajuster le total si écart d'arrondi
   const sTotal=stars.reduce((s,v)=>s+v,0);
   if(sTotal!==totalRec&&sTotal>0){const diff=totalRec-sTotal;stars[4]+=diff;}
 
@@ -1135,7 +1180,7 @@ function renderOverview(){
     const rows=gfa(m).filter(a=>a.zone===z2).sort((a,b)=>b.note-a.note);
     if(!rows.length)return;
     tb+=`<tr class="zhdr ${z2==='n'?'n':'s'}"><td colspan="9"><div class="zdot ${z2==='n'?'n':'s2'}" style="margin-right:6px;vertical-align:middle"></div>Zone ${z2==='n'?'Nord':'Sud'} — ${rows.length} agences</td></tr>`;
-    rows.forEach(a=>{const pd=p?D[a.id]?.[p]:null,nd2=pd?+(a.note-pd.note).toFixed(1):null,rd=pd?a.rec-pd.rec:null;tb+=`<tr class="${z2==='n'?'zrn':'zrs'}"><td>${zb(a.zone)}</td><td class="anm">${a.name}</td><td>${a.total}</td><td><strong>${a.rec}</strong></td><td>${bdg(rd)}</td><td>${a.resa}</td><td><span class="nval" style="color:${nc(a.note)}">${a.note>0?a.note.toFixed(1):'—'}</span></td><td>${bdg(nd2)}</td><td>${a.qr}</td></tr>`;});
+    rows.forEach(a=>{const pd=p?D[a.id]?.[p]:null,nd2=pd?+(a.note-pd.note).toFixed(1):null,rd=pd?a.rec-pd.rec:null;tb+=`<tr class="${z2==='n'?'zrn':'zrs'}"><td>${zb(a.zone)}</td><td class="anm">${a.name}</td><td>${a.total}</td><td><strong>${a.rec}</strong></td><td>${bdg(rd)}</td><td><span class="nval" style="color:${nc(a.note)}">${a.note>0?a.note.toFixed(1):'—'}</span></td><td>${bdg(nd2)}</td><td>${a.qr}</td></tr>`;});
   });
   document.getElementById('main-tbody').innerHTML=tb;
 }
@@ -1171,14 +1216,11 @@ function doCompare(){
 
   // Agréger les données sur tous les mois sélectionnés
   function agg(months){
-    const agences=gfa(months[0]); // agences actives (filtrées par selAg)
     const allRecs=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.rec||0),0),0);
-    const allResa=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.resa||0),0),0);
     const allQr=months.reduce((s,mo)=>s+AG.filter(a=>selAg.has(a.id)).reduce((ss,a)=>ss+(D[a.id]?.[mo]?.qr||0),0),0);
-    // Note = moyenne des notes moyennes mensuelles
     const notes=months.map(mo=>{const f=AG.filter(a=>selAg.has(a.id)&&(D[a.id]?.[mo]?.note||0)>0);return f.length?f.reduce((s,a)=>s+(D[a.id][mo].note),0)/f.length:0;}).filter(n=>n>0);
     const avgNote=notes.length?+(notes.reduce((s,n)=>s+n,0)/notes.length).toFixed(2):0;
-    return {rec:allRecs,resa:allResa,qr:allQr,note:avgNote};
+    return {rec:allRecs,qr:allQr,note:avgNote};
   }
 
   const dA=agg(selA),dB=agg(selB);
@@ -1186,7 +1228,7 @@ function doCompare(){
   const lblB=selB.length===1?ml(selB[0]):selB.map(ml).join('+');
 
   function kpi(lbl,vA,vB,fmt){const d=vB-vA;return `<div class="kcard"><div class="klbl">${lbl}</div><div style="display:flex;gap:14px;align-items:baseline;margin-top:4px"><span style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--ink3)">${fmt?fmt(vA):vA}</span><span style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700">${fmt?fmt(vB):vB}</span>${bdg(Number.isInteger(d)?d:+d.toFixed(2))}</div><div class="ksub"><span style="color:var(--ink3)">${lblA}</span><span style="margin:0 4px">→</span><strong>${lblB}</strong></div></div>`;}
-  document.getElementById('cmp-kpis').innerHTML=kpi('Note moy.',dA.note,dB.note,v=>v.toFixed(2))+kpi('Avis récoltés',dA.rec,dB.rec)+kpi('Réservations',dA.resa,dB.resa)+kpi('Scans QR',dA.qr,dB.qr);
+  document.getElementById('cmp-kpis').innerHTML=kpi('Note moy.',dA.note,dB.note,v=>v.toFixed(2))+kpi('Avis récoltés',dA.rec,dB.rec)+kpi('Scans QR',dA.qr,dB.qr);
 
   // Graphiques par agence : on prend le dernier mois de chaque période pour les barres individuelles
   const mA=selA[selA.length-1],mB=selB[selB.length-1];
@@ -1203,21 +1245,19 @@ function buildAgFocus(){
 }
 function doAgency(){
   const id=document.getElementById('ag-focus').value,ag=AG.find(a=>a.id===id),m=curMonth,p=pm(m);
-  const cur=D[id]?.[m]||{total:0,rec:0,resa:0,note:0,qr:0},prev=p?D[id]?.[p]:null;
+  const cur=D[id]?.[m]||{total:0,rec:0,note:0,qr:0},prev=p?D[id]?.[p]:null;
   document.getElementById('ag-krow').innerHTML=`
     <div class="kcard cg"><div class="klbl">Total avis</div><div class="kval">${cur.total}</div></div>
     <div class="kcard co"><div class="klbl">Récoltés ce mois</div><div class="kval">${cur.rec}</div><div class="ksub">${prev?bdg(cur.rec-prev.rec):''}</div></div>
-    <div class="kcard cb"><div class="klbl">Réservations</div><div class="kval">${cur.resa}</div></div>
     <div class="kcard cg"><div class="klbl">Note</div><div class="kval" style="color:${nc(cur.note)}">${cur.note>0?cur.note.toFixed(1):'—'}</div><div class="ksub">${prev&&cur.note>0?bdg(+(cur.note-prev.note).toFixed(1)):''}</div></div>
     <div class="kcard ca"><div class="klbl">Scans QR</div><div class="kval">${cur.qr}</div></div>
     <div class="kcard"><div class="klbl">Zone</div><div class="kval" style="font-size:14px;margin-top:6px">${zb(ag.zone)}</div></div>`;
   const mk=v=>MONTHS.map(mo=>D[id]?.[mo]?.[v]||null),lb=MONTHS.map(ml);
-  ['agn','aga','agr','agq'].forEach(dc);
+  ['agn','aga','agq'].forEach(dc);
   const co=()=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}});
   const notes=mk('note').filter(v=>v&&v>0);
   CH['agn']=new Chart(document.getElementById('ch-agn'),{type:'line',data:{labels:lb,datasets:[{data:mk('note').map(v=>v>0?v:null),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.4,fill:true,pointRadius:4,pointBackgroundColor:'#e85d04'}]},options:{...co(),scales:{y:{min:notes.length?Math.max(0,Math.min(...notes)-0.4):0,max:Math.min(5.2,(notes.length?Math.max(...notes):5)+0.2),grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
   CH['aga']=new Chart(document.getElementById('ch-aga'),{type:'bar',data:{labels:lb,datasets:[{data:mk('rec'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#1a7a4a':'#b7e4c7'),borderRadius:4,borderSkipped:false}]},options:co()});
-  CH['agr']=new Chart(document.getElementById('ch-agr'),{type:'bar',data:{labels:lb,datasets:[{data:mk('resa'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#1455a4':'#b3cfe8'),borderRadius:4,borderSkipped:false}]},options:co()});
   CH['agq']=new Chart(document.getElementById('ch-agq'),{type:'bar',data:{labels:lb,datasets:[{data:mk('qr'),backgroundColor:MONTHS.map(mo=>mo===curMonth?'#6d28d9':'#ddd6fe'),borderRadius:4,borderSkipped:false}]},options:co()});
 }
 
@@ -1497,42 +1537,66 @@ function parseImpXLS(buf,fname){
     const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
     if(!rows.length){toast('⚠ Fichier vide');return;}
 
-    // Détecter le mois depuis le nom du fichier ou le contenu
-    let detM=null;
-    const hay=(fname+' '+rows.flat().join(' ')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    // Normaliser MDET aussi pour la comparaison
-    Object.keys(MDET).forEach(k=>{
-      const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-      if(hay.includes(kn))detM=MDET[k];
-    });
+    // Détecter le mois depuis le nom du fichier
+    const detM=detectMonth(fname);
     const tgtM=detM||curMonth;
 
-    // Parser les lignes
+    // Trouver la ligne de départ des données
+    // On cherche la première ligne dont la col A contient un nom d'agence reconnu
+    let startRow = 0;
+    for(let i=0;i<Math.min(rows.length,10);i++){
+      const cell=String(rows[i]?.[0]||'').trim();
+      // Ligne d'agence = ni vide, ni titre/consigne/légende
+      if(cell.length>2&&!/cargo|import|statistiques|agence|avis|⚠|nommez|légende|•|réseau|total|récoltés|etoile|étoile|★|vérif/i.test(cell)){
+        startRow=i; break;
+      }
+    }
+
+    // Parser les lignes de données
+    // Structure template : A=Agence B=Total C=Récoltés D=5★ E=4★ F=3★ G=2★ H=1★ I=Resa J=Note K=QR
     const result={};let matched=0;
-    const isH=/agence|total|avis|note|scan/i.test(String(rows[0]?.[0]||''));
-    for(let i=isH?1:0;i<rows.length;i++){
-      const p=rows[i].map(c=>String(c||'').trim());
-      if(!p[0]||p[0].toLowerCase().includes('total'))continue;
+    for(let i=startRow;i<rows.length;i++){
+      const p=rows[i].map(c=>{
+        if(c===null||c===undefined||c==='')return '';
+        return String(c).trim();
+      });
+      const agRaw=p[0];
+      if(!agRaw)continue;
+      if(/^total|^réseau|^légende|^•|^vérif/i.test(agRaw))continue;
+
       const ag=AG.find(a=>{
         const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        const q=p[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        return n.includes(q.split('/')[0].trim())||q.includes(n.split('/')[0].trim())||n===q;
+        const q=agRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return n===q||n.includes(q.split('/')[0].trim())||q.includes(n.split('/')[0].trim());
       });
       if(!ag)continue;
+
+      // Lire les étoiles D(5★) E(4★) F(3★) G(2★) H(1★)
+      const s5=parseInt(p[3])||0;
+      const s4=parseInt(p[4])||0;
+      const s3=parseInt(p[5])||0;
+      const s2=parseInt(p[6])||0;
+      const s1=parseInt(p[7])||0;
+
+      // Note : peut être une formule Excel calculée, on la lit comme nombre
+      const noteRaw=String(p[9]||'').replace(',','.');
+      const note=parseFloat(noteRaw)||0;
+
       result[ag.id]={
-        total:parseInt(p[1])||0,
-        rec:parseInt(p[2])||0,
-        resa:parseInt(p[3])||0,
-        note:parseFloat(p[4].replace(',','.'))||0,
-        qr:parseInt(p[5])||0
+        total: parseInt(p[1])||0,
+        rec:   parseInt(p[2])||0,
+        stars: {5:s5, 4:s4, 3:s3, 2:s2, 1:s1},
+        resa:  parseInt(p[8])||0,
+        note:  note,
+        qr:    parseInt(p[10])||0,
       };
       matched++;
     }
 
-    // Préview
+    // Préview des lignes parsées
     const pv=document.getElementById('imp-preview');
     pv.style.display='block';
-    pv.textContent=rows.slice(0,6).map(r=>r.slice(0,7).join(' | ')).join('\n');
+    pv.textContent=rows.slice(startRow,startRow+5).map(r=>r.slice(0,11).map(c=>String(c||'').slice(0,12)).join(' | ')).join('\n');
 
     const me=document.getElementById('imp-match');
     me.style.display='block';
@@ -1581,7 +1645,7 @@ function renderImpQueue(){
 function removeFromQueue(m){delete impQueue[m];renderImpQueue();}
 
 function buildManualTbl(m){
-  document.getElementById('m-tbody').innerHTML=AG.map(ag=>{const d=D[ag.id]?.[m]||{total:0,rec:0,resa:0,note:0,qr:0};return `<tr><td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td><td>${zb(ag.zone)}</td><td><input type="number" id="mi-t-${ag.id}" value="${d.total}" min="0" step="1"></td><td><input type="number" id="mi-r-${ag.id}" value="${d.rec}" min="0" step="1"></td><td><input type="number" id="mi-rs-${ag.id}" value="${d.resa}" min="0" step="1"></td><td><input type="number" id="mi-n-${ag.id}" value="${d.note}" min="0" max="5" step="0.1"></td><td><input type="number" id="mi-q-${ag.id}" value="${d.qr}" min="0" step="1"></td></tr>`;}).join('');
+  document.getElementById('m-tbody').innerHTML=AG.map(ag=>{const d=D[ag.id]?.[m]||{total:0,rec:0,note:0,qr:0};return `<tr><td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td><td>${zb(ag.zone)}</td><td><input type="number" id="mi-t-${ag.id}" value="${d.total}" min="0" step="1"></td><td><input type="number" id="mi-r-${ag.id}" value="${d.rec}" min="0" step="1"></td><td><input type="number" id="mi-n-${ag.id}" value="${d.note}" min="0" max="5" step="0.1"></td><td><input type="number" id="mi-q-${ag.id}" value="${d.qr}" min="0" step="1"></td></tr>`;}).join('');
 }
 
 function saveImp(){
@@ -1622,9 +1686,9 @@ function saveImp(){
     const m=curMonth;addMonth(m);const p=pm(m);
     AG.forEach(ag=>{
       if(!D[ag.id])D[ag.id]={};
-      const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,r=parseInt(document.getElementById(`mi-r-${ag.id}`)?.value)||0,rs=parseInt(document.getElementById(`mi-rs-${ag.id}`)?.value)||0,n=parseFloat(document.getElementById(`mi-n-${ag.id}`)?.value)||0,q=parseInt(document.getElementById(`mi-q-${ag.id}`)?.value)||0;
+      const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,r=parseInt(document.getElementById(`mi-r-${ag.id}`)?.value)||0,n=parseFloat(document.getElementById(`mi-n-${ag.id}`)?.value)||0,q=parseInt(document.getElementById(`mi-q-${ag.id}`)?.value)||0;
       const pn=p?D[ag.id]?.[p]?.note:null;
-      D[ag.id][m]={total:t,rec:r,resa:rs,note:n,qr:q,evo:pn&&n?+(n-pn).toFixed(1):0};
+      D[ag.id][m]={total:t,rec:r,note:n,qr:q,evo:pn&&n?+(n-pn).toFixed(1):0};
     });
     saveLS();closeImpModal();render();
     document.getElementById('imp-last').textContent=`Saisie : ${ml(m)}`;
@@ -1663,19 +1727,13 @@ function render(){
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
 
 /* ══ INIT ══ */
-// Charger la DB partagée au démarrage puis toutes les 60s
-window.addEventListener('load',()=>{
-  if(DB_READY){
-    dbLoad().then(()=>{buildMonthSelects();render();});
-    setInterval(()=>{if(DB_READY)dbLoad().then(()=>{buildMonthSelects();render();});},60000);
-  }
-});
 buildMonthSelects();
 buildAgList();
 buildAgFocus();
 document.querySelectorAll('.ctrl-rev').forEach(el=>el.classList.remove('show'));
 document.getElementById('csep-imp').style.display='block';
 document.getElementById('ctrl-imp-w').style.display='flex';
+loadInitialData();
 render();
 </script>
 </body>
