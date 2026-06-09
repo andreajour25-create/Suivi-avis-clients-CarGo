@@ -1460,34 +1460,193 @@ function renderRevPage(revs){
 }
 
 /* ══ WORD CLOUD ══ */
-const STOP=new Set('le la les de du des un une au aux et en est à a ce qui que pour par sur avec pas plus très tout bien été nous ils je il elle se sa son ses leur leurs mon ma mes dans ne mais ou si comme même aussi trop peu cela cette ces lors entre après avant chez puis donc car or ni vous elles on y dont lorsque quand celui celle ceux jai avoir faire fait faut vais veux vraiment assez encore toujours jamais rien moins après mieux plutôt toute tous toutes'.split(' '));
-const GENERIC=new Set('agence location voiture véhicule cargo vehicule voitures véhicules agences louer loué louée service services client clients personnel équipe gens personne fois jour jours mois semaine heure heures endroit chose choses'.split(' '));
-const ADJ_POS=new Set('réactif réactive rapide efficace professionnel professionnelle disponible accueillant accueillante sympathique agréable excellent excellente parfait parfaite impeccable sérieux sérieuse compétent compétente attentionné attentionnée chaleureux chaleureuse généreux généreuse souriant souriante aimable flexible ponctuel ponctuelle simple facile pratique super génial géniale formidable chouette propre net nette satisfait satisfaite ravi ravie content contente heureux heureuse top recommande recommandé recommandée irréprochable merveilleux merveilleuse exceptionnel exceptionnelle'.split(' '));
-// Liste très large — adjectifs + noms de problèmes courants
-const ADJ_NEG=new Set('long longue lent lente mauvais mauvaise décevant décevante insuffisant insuffisante nul nulle médiocre désagréable incompétent incompétente absent absente injoignable inaccessible inexistant inexistante catastrophique horrible désastreux désastreuse problématique incorrect incorrecte faux fausse déplorable regrettable insatisfait insatisfaite frustrant frustrante inadapté inadaptée inefficace impoli impolie irrespectueux irrespectueuse pitoyable honteux honteuse scandaleux scandaleuse aberrant aberrante pénible compliqué difficile tardif tardive inexact erroné opaque flou incomplet incomplète décevant déçu déçue abandonné ignoré oublié bloqué perdu trompé arnaqué floué retard erreur problème souci difficulté manque oubli attente dysfonctionnement arnaque litige plainte silence'.split(' '));
+
+// Stopwords FR étendus — inclut adverbes et mots vides qui polluent les bi-grammes
+const STOP=new Set(`le la les de du des un une au aux et en est à a ce ce qui que pour par sur avec
+pas plus très tout bien été nous ils je il elle se sa son ses leur leurs mon ma mes dans ne mais ou si
+comme même aussi trop peu cela cette ces lors entre après avant chez puis donc car or ni vous elles on
+y dont lorsque quand celui celle ceux avoir faire fait faut vraiment assez encore toujours jamais rien
+moins mieux plutôt toute tous toutes beaucoup vraiment plutôt notamment surtout lors parfois souvent
+déjà ainsi donc voilà alors sinon quand même mis mis mis pris pris tant soit peu tellement vraiment
+lors jusqu jusque car suite suite suite avait était avaient seraient serait pouvait fallait allait
+allait voulait pouvaient devait devaient aurait auraient aller pouvoir vouloir devoir falloir savoir
+avoir être faire prendre mettre rendre donner trouver voir partir venir revenir aller arriver passer
+entier entière entiers entières propre propres même mêmes seul seule seuls seules
+très trop assez bien peu fort grand grande grands grandes petit petite petits petites
+notre nos votre vos leur leurs tout tous toute toutes`.split(/\s+/).filter(w=>w.length>0));
+
+// Mots génériques du contexte CarGo — ni positifs ni négatifs
+const GENERIC=new Set(`agence location voiture véhicule cargo vehicule voitures véhicules agences
+louer loué louée service services client clients personnel équipe gens personne fois jour jours mois
+semaine heure heures endroit chose choses camion camions utilitaire utilitaires van vans
+fourgon fourgons fourgonnette boite boîte benne plateau remorque remorques
+contrat contrats dossier dossiers prise charge retour retours véhic agenc locat
+monsieur madame madame merci bonjour bonsoir cordialement
+pouvoir vouloir devoir aller faire prendre venir mettre`.split(/\s+/).filter(w=>w.length>0));
+
+// Adjectifs POSITIFS reconnus — utilisés seuls ou en bi-gramme
+const ADJ_POS=new Set(`réactif réactive rapide efficace professionnel professionnelle disponible
+accueillant accueillante sympathique agréable excellent excellente parfait parfaite impeccable
+sérieux sérieuse compétent compétente attentionné attentionnée chaleureux chaleureuse
+généreux généreuse souriant souriante aimable flexible ponctuel ponctuelle simple facile
+pratique super génial géniale formidable chouette propre net nette satisfait satisfaite
+ravi ravie content contente heureux heureuse recommandé recommandée irréprochable
+merveilleux merveilleuse exceptionnel exceptionnelle agréable confortable moderne récent
+récente nickel tip-top parfaite top nickel accueilli accueillie accueilli serviable serviables
+souriant souriante dynamique dynamiques attentif attentive courtois courtoise poli polie
+bienveillant bienveillante rassurant rassurante clair claire transparent transparente
+honnête honnêtes consciencieux consciencieuse minutieux minutieuse rigoureux rigoureuse`.split(/\s+/).filter(w=>w.length>0));
+
+// Noms concrets qui peuvent former un bi-gramme utile avec un adjectif
+// ex : "accueil chaleureux", "équipe réactive", "délai long"
+const NOMS_CONTEXTE=new Set(`accueil conseil conseils équipe contact expérience process procédure
+délai délais délai attente réponse réponses communication explication explications
+remise livraison livraisons retour retours rendu rendus prix tarif tarifs facturation
+véhicule état entretien propreté nettoyage travail boulot prestation prestations
+prise restitution restitutions accès parking réservation réservations appel appels mail
+site web formulaire formulaires devis agenda organisation`.split(/\s+/).filter(w=>w.length>0));
+
+// Adjectifs NÉGATIFS reconnus — UNIQUEMENT ces mots dans le nuage négatif
+const ADJ_NEG=new Set(`long longue lents lente mauvais mauvaise décevant décevante insuffisant
+insuffisante nul nulle médiocre désagréable incompétent incompétente absent absente
+injoignable inaccessible inexistant inexistante catastrophique horrible désastreux désastreuse
+problématique incorrect incorrecte faux fausse déplorable regrettable insatisfait insatisfaite
+frustrant frustrante inadapté inadaptée inefficace impoli impolie irrespectueux irrespectueuse
+pitoyable honteux honteuse scandaleux scandaleuse aberrant aberrante pénible compliqué
+difficile tardif tardive inexact erroné opaque flou incomplet incomplète déçu déçue
+abandonné abandonnée ignoré ignorée oublié oubliée bloqué bloquée perdu perdue
+trompé trompée arnaqué arnaquée floué flouée désorganisé désorganisée confus confuse
+bâclé bâclée négatif négative sale sales dégradé dégradée cassé cassée rayé rayée
+défectueux défectueuse abîmé abîmée cher chère excessif excessive`.split(/\s+/).filter(w=>w.length>0));
+
+// Noms de problèmes qui ont une valeur d'analyse seuls (sans adjectif)
+const NOMS_PROB=new Set(`retard retards erreur erreurs problème problèmes souci soucis
+difficulté difficultés manque manques oubli oublis attente attentes dysfonctionnement
+arnaque litige litige plainte plaintes panne pannes dommage dommages dégât dégâts
+rayure rayures égratignure égratignures surcharge surfacturation refus incompréhension`.split(/\s+/).filter(w=>w.length>0));
+
 function norm(w){return w.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-function buildWC(text,cls,negOnly){
+
+function buildWC(text, cls, negOnly){
   if(!text.trim())return `<span style="font-size:12px;color:var(--ink3)">Pas assez de texte.</span>`;
-  const raw=text.toLowerCase().replace(/[^a-zàâäéèêëîïôöùûüç\s'-]/g,' ').split(/\s+/).filter(w=>w.length>2);
+
+  // Tokeniser en conservant les accents pour l'affichage
+  const raw=text.toLowerCase()
+    .replace(/[^a-zàâäéèêëîïôöùûüç'\s-]/g,' ')
+    .split(/\s+/)
+    .filter(w=>w.replace(/'/g,'').length>2);
+
   if(!raw.length)return `<span style="font-size:12px;color:var(--ink3)">Pas assez de texte.</span>`;
-  const orig={};raw.forEach(w=>{const n=norm(w);if(!orig[n]||orig[n].length<w.length)orig[n]=w;});
+
+  // Table forme normalisée → forme affichée (accentuée)
+  const orig={};
+  raw.forEach(w=>{
+    const n=norm(w);
+    if(!orig[n]||orig[n].length<w.length) orig[n]=w;
+  });
+
   const scores={};
+
+  const add=(key, pts)=>{
+    const k=orig[norm(key)]||key;
+    scores[k]=(scores[k]||0)+pts;
+  };
+
   if(negOnly){
-    // 1er passage : mots négatifs reconnus
-    raw.forEach(w=>{const n=norm(w);if(ADJ_NEG.has(n))scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;});
-    // Fallback : si rien trouvé, tous les mots non-stop
-    if(Object.keys(scores).length===0){
-      raw.forEach(w=>{const n=norm(w);if(!STOP.has(n)&&!GENERIC.has(n)&&w.length>=4)scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;});
+    // ── MODE NÉGATIF ──
+    // Étape 1 : adjectifs négatifs reconnus (haute priorité)
+    raw.forEach(w=>{
+      const n=norm(w);
+      if(ADJ_NEG.has(n)) add(w, 2);
+    });
+
+    // Étape 2 : noms de problèmes concrets
+    raw.forEach(w=>{
+      const n=norm(w);
+      if(NOMS_PROB.has(n)) add(w, 1.5);
+    });
+
+    // Étape 3 : bi-grammes UNIQUEMENT si adjectif négatif + nom de contexte (ou inverse)
+    // Exemples valides : "délai long", "attente interminable", "retard important"
+    for(let i=0;i<raw.length-1;i++){
+      const n1=norm(raw[i]), n2=norm(raw[i+1]);
+      if(STOP.has(n1)||STOP.has(n2)) continue;
+      if(GENERIC.has(n1)&&GENERIC.has(n2)) continue;
+
+      const isNeg1=ADJ_NEG.has(n1), isNeg2=ADJ_NEG.has(n2);
+      const isNom1=NOMS_CONTEXTE.has(n1)||NOMS_PROB.has(n1);
+      const isNom2=NOMS_CONTEXTE.has(n2)||NOMS_PROB.has(n2);
+
+      // Bi-gramme valide : adjectif négatif + nom OU nom + adjectif négatif
+      if((isNeg1&&isNom2)||(isNom1&&isNeg2)){
+        const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);
+        scores[bi]=(scores[bi]||0)+2.5;
+        // Réduire les composants pour éviter le doublon
+        if(scores[orig[n1]||raw[i]])scores[orig[n1]||raw[i]]=Math.max(0,(scores[orig[n1]||raw[i]]||0)-1);
+        if(scores[orig[n2]||raw[i+1]])scores[orig[n2]||raw[i+1]]=Math.max(0,(scores[orig[n2]||raw[i+1]]||0)-1);
+      }
     }
-    for(let i=0;i<raw.length-1;i++){const n1=norm(raw[i]),n2=norm(raw[i+1]);if((ADJ_NEG.has(n1)||ADJ_NEG.has(n2))&&!STOP.has(n1)&&!STOP.has(n2)&&!GENERIC.has(n1)&&!GENERIC.has(n2)){const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);scores[bi]=(scores[bi]||0)+1.5;}}
+
+    // Étape 4 : fallback si vraiment rien — uniquement les noms de problèmes fréquents
+    if(Object.values(scores).filter(v=>v>0).length===0){
+      raw.forEach(w=>{
+        const n=norm(w);
+        if(!STOP.has(n)&&!GENERIC.has(n)&&w.length>=5&&(NOMS_PROB.has(n)||NOMS_CONTEXTE.has(n)))
+          add(w, 1);
+      });
+    }
+
   } else {
-    raw.forEach(w=>{const n=norm(w);if(ADJ_POS.has(n))scores[orig[n]||w]=(scores[orig[n]||w]||0)+1;else if(!STOP.has(n)&&!GENERIC.has(n)&&w.length>=4)scores[orig[n]||w]=(scores[orig[n]||w]||0)+0.4;});
-    for(let i=0;i<raw.length-1;i++){const n1=norm(raw[i]),n2=norm(raw[i+1]);if((ADJ_POS.has(n1)||ADJ_POS.has(n2))&&!STOP.has(n1)&&!STOP.has(n2)&&!GENERIC.has(n1)&&!GENERIC.has(n2)&&raw[i].length>2&&raw[i+1].length>2){const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);scores[bi]=(scores[bi]||0)+1.8;if(scores[orig[n1]||raw[i]])scores[orig[n1]||raw[i]]=Math.max(0,(scores[orig[n1]||raw[i]]||0)-0.6);if(scores[orig[n2]||raw[i+1]])scores[orig[n2]||raw[i+1]]=Math.max(0,(scores[orig[n2]||raw[i+1]]||0)-0.6);}}
+    // ── MODE POSITIF ──
+    // Étape 1 : adjectifs positifs reconnus (haute priorité)
+    raw.forEach(w=>{
+      const n=norm(w);
+      if(ADJ_POS.has(n)) add(w, 2);
+    });
+
+    // Étape 2 : bi-grammes UNIQUEMENT adjectif positif + nom de contexte (ou inverse)
+    // Exemples valides : "accueil chaleureux", "équipe réactive", "très professionnel"
+    for(let i=0;i<raw.length-1;i++){
+      const n1=norm(raw[i]), n2=norm(raw[i+1]);
+      if(STOP.has(n1)||STOP.has(n2)) continue;
+      if(GENERIC.has(n1)&&GENERIC.has(n2)) continue;
+
+      const isAdj1=ADJ_POS.has(n1), isAdj2=ADJ_POS.has(n2);
+      const isNom1=NOMS_CONTEXTE.has(n1);
+      const isNom2=NOMS_CONTEXTE.has(n2);
+
+      // Bi-gramme valide : adjectif + nom de contexte OU nom de contexte + adjectif
+      if((isAdj1&&isNom2)||(isNom1&&isAdj2)){
+        const bi=(orig[n1]||raw[i])+' '+(orig[n2]||raw[i+1]);
+        scores[bi]=(scores[bi]||0)+2.5;
+        // Réduire les composants
+        if(scores[orig[n1]||raw[i]])scores[orig[n1]||raw[i]]=Math.max(0,(scores[orig[n1]||raw[i]]||0)-1);
+        if(scores[orig[n2]||raw[i+1]])scores[orig[n2]||raw[i+1]]=Math.max(0,(scores[orig[n2]||raw[i+1]]||0)-1);
+      }
+      // Deux adjectifs positifs consécutifs → pas de bi-gramme (évite "parfait excellent")
+    }
+
+    // Étape 3 : noms de contexte fréquents (sans adjectif, uniquement si récurrents)
+    raw.forEach(w=>{
+      const n=norm(w);
+      if(NOMS_CONTEXTE.has(n)&&!GENERIC.has(n)) add(w, 0.5);
+    });
   }
-  const sorted=Object.entries(scores).filter(([,c])=>c>0.3).sort((a,b)=>b[1]-a[1]).slice(0,20);
-  if(!sorted.length)return `<span style="font-size:12px;color:var(--ink3)">${negOnly?'Aucun point négatif détecté.':'Pas assez de qualificatifs.'}</span>`;
+
+  // Trier, filtrer les scores trop faibles, limiter à 16 mots max
+  const sorted=Object.entries(scores)
+    .filter(([,c])=>c>=0.8)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,16);
+
+  if(!sorted.length){
+    return `<span style="font-size:12px;color:var(--ink3)">${
+      negOnly?'Aucun point négatif identifié dans ces avis.':'Pas assez de qualificatifs positifs identifiés.'
+    }</span>`;
+  }
+
   const mx=sorted[0][1];
-  return sorted.map(([w,c])=>`<span class="ww ${cls}" style="font-size:${10+Math.round((c/mx)*13)}px" title="${Math.round(c)} mention(s)">${w}</span>`).join('');
+  return sorted.map(([w,c])=>`<span class="ww ${cls}" style="font-size:${10+Math.round((c/mx)*13)}px" title="${Math.round(c)} occurrence(s)">${w}</span>`).join('');
 }
 
 /* ══ IMPORT STATS MODAL ══ */
