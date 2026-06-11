@@ -415,7 +415,10 @@ input.fi{display:none}
 
     <!-- ONGLET MANUEL -->
     <div id="imp-tab-manual" style="display:none">
-      <div style="margin-bottom:10px;font-size:12px;color:var(--ink2)">Mois : <strong id="man-month-display"></strong></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="clbl">Mois à saisir</div>
+        <select id="man-month-sel" style="border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:13px;font-family:'Inter',sans-serif;font-weight:600;background:var(--paper);color:var(--ink)" onchange="buildManualTbl(this.value)"></select>
+      </div>
       <div style="overflow-x:auto"><table class="dtbl">
         <thead><tr><th>Agence</th><th>Zone</th><th>Total</th><th>Récoltés</th><th>Note</th><th>QR</th></tr></thead>
         <tbody id="m-tbody"></tbody>
@@ -1655,7 +1658,11 @@ let impData=null;
 let impQueue={}; // {moisKey: {data:{agId:{...}}, label:'Mars 26', matched:N}}
 
 function openImpModal(){
-  document.getElementById('man-month-display').textContent=ml(curMonth);
+  // Remplir le sélecteur de mois de la saisie manuelle
+  const manSel=document.getElementById('man-month-sel');
+  if(manSel){
+    manSel.innerHTML=MONTHS.map(m=>`<option value="${m}" ${m===curMonth?'selected':''}>${ml(m)}</option>`).join('');
+  }
   buildManualTbl(curMonth);
   document.getElementById('imp-modal').classList.add('open');
   switchImpTab('xls',null);
@@ -1883,11 +1890,16 @@ function saveImp(){
     document.getElementById('imp-last').textContent=`Import : ${months.map(ml).join(', ')}`;
     toast(`✅ ${nb} mois enregistrés`);
   } else {
-    // Saisie manuelle
-    const m=curMonth;addMonth(m);const p=pm(m);
+    // Saisie manuelle — lire le mois depuis le sélecteur de la modale
+    const manMonthSel=document.getElementById('man-month-sel');
+    const m=manMonthSel?manMonthSel.value:curMonth;
+    addMonth(m);const p=pm(m);
     AG.forEach(ag=>{
       if(!D[ag.id])D[ag.id]={};
-      const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,r=parseInt(document.getElementById(`mi-r-${ag.id}`)?.value)||0,n=parseFloat(document.getElementById(`mi-n-${ag.id}`)?.value)||0,q=parseInt(document.getElementById(`mi-q-${ag.id}`)?.value)||0;
+      const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,
+            r=parseInt(document.getElementById(`mi-r-${ag.id}`)?.value)||0,
+            n=parseFloat(document.getElementById(`mi-n-${ag.id}`)?.value)||0,
+            q=parseInt(document.getElementById(`mi-q-${ag.id}`)?.value)||0;
       const pn=p?D[ag.id]?.[p]?.note:null;
       D[ag.id][m]={total:t,rec:r,note:n,qr:q,evo:pn&&n?+(n-pn).toFixed(1):0};
     });
