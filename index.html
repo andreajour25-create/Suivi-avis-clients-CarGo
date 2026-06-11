@@ -1725,7 +1725,13 @@ function parseImpXLS(buf,fname){
     if(!rows.length){toast('⚠ Fichier vide');return;}
 
     // Détecter le mois depuis le nom du fichier
-    const detM=detectMonth(fname);
+    const _detect=(txt)=>{
+      const h=txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const ks=Object.keys(MDET).sort((a,b)=>b.length-a.length);
+      for(const k of ks){const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(h.includes(kn))return MDET[k];}
+      return null;
+    };
+    const detM=_detect(fname);
     const tgtM=detM||curMonth;
 
     // Trouver la ligne de départ — template CarGo : 4 lignes d'en-tête → données à partir de l'index 4
