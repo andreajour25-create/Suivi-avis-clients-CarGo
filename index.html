@@ -1883,17 +1883,24 @@ function saveImp(){
     });
     saveLS();
     const nb=months.length;
+    // Forcer l'affichage sur le dernier mois importé
+    const lastM=months[months.length-1];
+    curMonth=lastM;
+    buildMonthSelects(); // Reconstruire avec le bon mois sélectionné
     impQueue={};
     renderImpQueue();
     closeImpModal();
-    render();
+    renderOverview(); // Appel direct — curMonth est maintenant correct
     document.getElementById('imp-last').textContent=`Import : ${months.map(ml).join(', ')}`;
-    toast(`✅ ${nb} mois enregistrés`);
+    toast(`✅ ${nb} mois enregistrés · Affichage : ${ml(lastM)}`);
   } else {
     // Saisie manuelle — lire le mois depuis le sélecteur de la modale
     const manMonthSel=document.getElementById('man-month-sel');
     const m=manMonthSel?manMonthSel.value:curMonth;
-    addMonth(m);const p=pm(m);
+    if(!m){toast('⚠ Sélectionnez un mois.');return;}
+    // S'assurer que le mois est dans MONTHS et dans D
+    if(!MONTHS.includes(m)){MONTHS.push(m);buildMonthSelects();}
+    const p=pm(m);
     AG.forEach(ag=>{
       if(!D[ag.id])D[ag.id]={};
       const t=parseInt(document.getElementById(`mi-t-${ag.id}`)?.value)||0,
@@ -1903,7 +1910,12 @@ function saveImp(){
       const pn=p?D[ag.id]?.[p]?.note:null;
       D[ag.id][m]={total:t,rec:r,note:n,qr:q,evo:pn&&n?+(n-pn).toFixed(1):0};
     });
-    saveLS();closeImpModal();render();
+    // Mettre à jour curMonth et la barre AVANT render
+    curMonth=m;
+    [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
+    saveLS();
+    closeImpModal();
+    renderOverview();
     document.getElementById('imp-last').textContent=`Saisie : ${ml(m)}`;
     toast(`✅ ${ml(m)} enregistré`);
   }
