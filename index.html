@@ -292,7 +292,9 @@ input.fi{display:none}
 
   <!-- RÉPARTITION NOTES PAR ÉTOILE -->
   <div class="card" style="margin-bottom:16px">
-    <div class="sttl">Répartition des avis récoltés <span class="stag" id="dist-lbl"></span></div>
+    <div class="sttl">Répartition des avis récoltés <span class="stag" id="dist-lbl"></span>
+      <span id="dist-avg" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--acc);margin-left:auto"></span>
+    </div>
     <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap">
       <div class="ch-donut"><canvas id="ch-donut"></canvas></div>
       <div style="flex:1;min-width:200px" id="star-bars"></div>
@@ -866,12 +868,16 @@ function applyData(sv){
                    'sep25','oct25','nov25','dec25','jan26','feb26','mar26'];
   AG.forEach(a=>{
     if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{
-      // Écraser si : mois non hardcodé OU données plus complètes (note > 0)
+      if(!d)return;
       if(!HARDCODED.includes(m)){
+        // Mois non hardcodé (importé) → toujours appliquer
         D[a.id][m]=d;
-      } else if(d&&d.note>0&&d.total>0){
-        // Pour les mois hardcodés, n'écraser que si les données importées semblent valides
-        D[a.id][m]=d;
+      } else {
+        // Mois hardcodé → appliquer seulement si les données importées
+        // contiennent au moins une valeur non nulle (= vraie saisie, pas le placeholder vide)
+        const hasData = (d.total>0)||(d.rec>0)||(d.note>0)||(d.qr>0)||(d.resa>0)
+                        ||(d.stars&&Object.values(d.stars).some(v=>v>0));
+        if(hasData) D[a.id][m]=d;
       }
     });
   });
@@ -1115,11 +1121,13 @@ function renderOverview(){
   // On se base sur les avis récoltés du mois par agence.
   const recFa=gfa(m).filter(a=>a.rec>0);
   const totalRec=recFa.reduce((s,a)=>s+a.rec,0);
+  const avgRec=recFa.length>0?(totalRec/recFa.length).toFixed(1):0;
 
-  // Vérifier si on a de vraies données d'étoiles importées
   const hasRealStars=recFa.some(a=>a.stars&&Object.values(a.stars).some(v=>v>0));
   document.getElementById('dist-lbl').textContent=
     `${totalRec} avis · ${ml(m)}${hasRealStars?' · données réelles':' · estimation'}`;
+  document.getElementById('dist-avg').textContent=
+    recFa.length>0?`Ø ${avgRec} avis / agence`:'';
 
   // stars[0]=1★ … stars[4]=5★
   const stars=[0,0,0,0,0];
