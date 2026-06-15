@@ -294,6 +294,7 @@ input.fi{display:none}
   <div class="card" style="margin-bottom:16px">
     <div class="sttl">Répartition des avis récoltés <span class="stag" id="dist-lbl"></span>
       <span id="dist-avg" style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--acc);margin-left:auto"></span>
+      <button class="mbtn-lock" onclick="openDistImpModal()" title="Importer la répartition des notes">🔒 <span style="font-size:11px">Répartition</span></button>
     </div>
     <div style="display:flex;gap:32px;align-items:center;flex-wrap:wrap">
       <div class="ch-donut"><canvas id="ch-donut"></canvas></div>
@@ -387,8 +388,8 @@ input.fi{display:none}
 <!-- MODAL IMPORT STATS -->
 <div class="ov" id="imp-modal">
   <div class="modal">
-    <h2>📥 Importer les statistiques mensuelles</h2>
-    <p class="mdesc">Glissez un fichier Excel (.xls / .xlsx) par mois. Le mois est détecté automatiquement depuis le nom du fichier ou son contenu. Vous pouvez importer plusieurs fichiers l'un après l'autre.</p>
+    <h2>📥 Statistiques mensuelles — Vue d'ensemble</h2>
+    <p class="mdesc">Importez ici : <strong>Total avis cumulé</strong>, <strong>Avis récoltés ce mois</strong>, <strong>Note Google</strong> et <strong>Scans QR code</strong> par agence. Glissez un fichier Excel (.xls / .xlsx) par mois — le mois est détecté automatiquement.</p>
     <div class="itabs">
       <button class="itab on" onclick="switchImpTab('xls',this)">📊 Import Excel</button>
       <button class="itab"    onclick="switchImpTab('manual',this)">✏ Saisie manuelle</button>
@@ -430,6 +431,53 @@ input.fi{display:none}
     <div class="macts">
       <button class="mbtn ghost" onclick="closeImpModal()">Fermer</button>
       <button class="mbtn grn" id="imp-save-btn" onclick="saveImp()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT RÉPARTITION DES NOTES -->
+<div class="ov" id="dist-imp-modal">
+  <div class="modal">
+    <h2>⭐ Répartition des avis récoltés</h2>
+    <p class="mdesc">Importez ici, par agence : le <strong>nombre d'avis récoltés</strong>, la <strong>répartition par note (1★ à 5★)</strong> et la <strong>note moyenne</strong> de ces avis. Ces données alimentent le donut et les barres de répartition.</p>
+    <div class="itabs">
+      <button class="itab on" onclick="switchDistTab('xls',this)">📊 Import Excel</button>
+      <button class="itab"    onclick="switchDistTab('manual',this)">✏ Saisie manuelle</button>
+    </div>
+
+    <!-- ONGLET EXCEL -->
+    <div id="dist-tab-xls">
+      <div class="fmthelp">
+        <strong>Format attendu (colonnes dans cet ordre) :</strong><br>
+        <code>Agence · Récoltés · 5★ · 4★ · 3★ · 2★ · 1★ · Note moy.</code><br>
+        Le mois est détecté depuis le nom du fichier (ex : <code>mars-26.xlsx</code>).
+      </div>
+      <div class="dzone" id="dist-imp-drop" onclick="document.getElementById('dist-imp-fi').click()" ondragover="distImpDrag(event,1)" ondragleave="distImpDrag(event,0)" ondrop="distImpDrop(event)" style="margin-bottom:10px">
+        <div class="dzone-ico">⭐</div>
+        <div class="dzone-ttl">Glissez votre fichier Excel ici</div>
+        <div class="dzone-sub">.xls ou .xlsx · répartition des notes par agence</div>
+        <input type="file" id="dist-imp-fi" class="fi" accept=".xls,.xlsx" onchange="handleDistImpFile(this.files[0])">
+      </div>
+      <div id="dist-imp-preview" class="prevbox"></div>
+      <div id="dist-imp-match" class="matchline"></div>
+      <div id="dist-imp-queue" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ONGLET MANUEL -->
+    <div id="dist-tab-manual" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div class="clbl">Mois à saisir</div>
+        <select id="dist-man-month-sel" style="border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:13px;font-family:'Inter',sans-serif;font-weight:600;background:var(--paper);color:var(--ink)" onchange="buildDistManualTbl(this.value)"></select>
+      </div>
+      <div style="overflow-x:auto"><table class="dtbl">
+        <thead><tr><th>Agence</th><th>Zone</th><th>Récoltés</th><th>5★</th><th>4★</th><th>3★</th><th>2★</th><th>1★</th><th>Note moy.</th></tr></thead>
+        <tbody id="dist-m-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <div class="macts">
+      <button class="mbtn ghost" onclick="closeDistImpModal()">Fermer</button>
+      <button class="mbtn grn" onclick="saveDistImp()">💾 Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1859,6 +1907,207 @@ function renderImpQueue(){
     </div>`).join('');
 }
 function removeFromQueue(m){delete impQueue[m];renderImpQueue();}
+
+/* ══════════════════════════════════════════
+   MODAL IMPORT RÉPARTITION DES AVIS RÉCOLTÉS
+   (Récoltés, 5★→1★, Note moyenne de ces avis)
+══════════════════════════════════════════ */
+let distImpData=null;
+let distImpQueue={};
+
+function openDistImpModal(){
+  const manSel=document.getElementById('dist-man-month-sel');
+  if(manSel) manSel.innerHTML=MONTHS.map(m=>`<option value="${m}" ${m===curMonth?'selected':''}>${ml(m)}</option>`).join('');
+  buildDistManualTbl(curMonth);
+  document.getElementById('dist-imp-modal').classList.add('open');
+  switchDistTab('xls',null);
+  renderDistImpQueue();
+}
+function closeDistImpModal(){
+  document.getElementById('dist-imp-modal').classList.remove('open');
+  distImpData=null;
+  document.getElementById('dist-imp-preview').style.display='none';
+  document.getElementById('dist-imp-match').style.display='none';
+}
+function switchDistTab(tab,btn){
+  document.getElementById('dist-tab-xls').style.display=tab==='xls'?'block':'none';
+  document.getElementById('dist-tab-manual').style.display=tab==='manual'?'block':'none';
+  document.querySelectorAll('#dist-imp-modal .itab').forEach((b,i)=>b.classList.toggle('on',(tab==='xls'&&i===0)||(tab==='manual'&&i===1)));
+}
+function distImpDrag(e,on){e.preventDefault();document.getElementById('dist-imp-drop').classList.toggle('drag',!!on);}
+function distImpDrop(e){e.preventDefault();distImpDrag(e,0);const f=e.dataTransfer.files[0];if(f)handleDistImpFile(f);}
+function handleDistImpFile(file){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>parseDistImpXLS(ev.target.result,file.name);
+  r.readAsArrayBuffer(file);
+}
+
+function parseDistImpXLS(buf,fname){
+  try{
+    const wb=XLSX.read(buf,{type:'array',cellFormula:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    if(!rows.length){toast('⚠ Fichier vide');return;}
+
+    // Détecter le mois depuis le nom du fichier
+    const _detect=(txt)=>{
+      const h=txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const ks=Object.keys(MDET).sort((a,b)=>b.length-a.length);
+      for(const k of ks){const kn=k.normalize('NFD').replace(/[\u0300-\u036f]/g,'');if(h.includes(kn))return MDET[k];}
+      return null;
+    };
+    const detM=_detect(fname);
+    const tgtM=detM||curMonth;
+
+    // Trouver la ligne de départ des données
+    let startRow=0;
+    for(let i=0;i<Math.min(rows.length,15);i++){
+      const cell=String(rows[i]?.[0]||'').trim();
+      if(cell.length>2&&!/cargo|import|statist|agence|avis|⚠|nommez|légende|•|réseau|total|récoltés|etoile|étoile|★|vérif|zone|n\/s/i.test(cell)){
+        startRow=i; break;
+      }
+    }
+
+    // Format : Agence · Récoltés · 5★ · 4★ · 3★ · 2★ · 1★ · Note moy.
+    const toNum=(v)=>{if(v===null||v===undefined||v==='')return 0;const s=String(v).replace(',','.').replace(/[^\d.\-]/g,'');const n=parseFloat(s);return isNaN(n)?0:n;};
+    const toInt=(v)=>Math.round(toNum(v))||0;
+
+    const result={};let matched=0;
+    for(let i=startRow;i<rows.length;i++){
+      const p=rows[i].map(c=>(c===null||c===undefined||c==='')?'':String(c).trim());
+      const agRaw=p[0];
+      if(!agRaw)continue;
+      if(/^total|^réseau|^légende|^•|^vérif/i.test(agRaw))continue;
+
+      const ag=AG.find(a=>{
+        const n=a.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        const q=agRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return n===q||n.includes(q.split('/')[0].trim())||q.includes(n.split('/')[0].trim());
+      });
+      if(!ag)continue;
+
+      const rec=toInt(p[1]);
+      const s5=toInt(p[2]), s4=toInt(p[3]), s3=toInt(p[4]), s2=toInt(p[5]), s1=toInt(p[6]);
+      const note=toNum(p[7]);
+
+      result[ag.id]={rec, stars:{5:s5,4:s4,3:s3,2:s2,1:s1}, note};
+      matched++;
+    }
+
+    const pv=document.getElementById('dist-imp-preview');
+    pv.style.display='block';
+    pv.textContent=rows.slice(startRow,startRow+5).map(r=>r.slice(0,8).map(c=>String(c||'').slice(0,12)).join(' | ')).join('\n');
+
+    const me=document.getElementById('dist-imp-match');
+    me.style.display='block';
+    if(matched>0){
+      me.style.color='var(--green)';
+      me.textContent=`✅ ${matched} agence(s) reconnue(s) → ${ml(tgtM)}`;
+      distImpData={month:tgtM,data:result,label:ml(tgtM),matched};
+    } else {
+      me.style.color='var(--red)';
+      me.textContent='⚠ Aucune agence reconnue — vérifiez les noms dans la colonne A.';
+      distImpData=null;
+    }
+  }catch(e){toast('⚠ Erreur lecture Excel : '+e.message);}
+}
+
+function renderDistImpQueue(){
+  const q=document.getElementById('dist-imp-queue');
+  const months=Object.keys(distImpQueue);
+  if(!months.length){q.innerHTML='';return;}
+  q.innerHTML=`<div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Mois prêts à enregistrer</div>`+
+    months.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--green-bg);border-radius:6px;margin-bottom:4px;font-size:12px">
+      <span style="color:var(--green)">✓</span>
+      <strong>${distImpQueue[m].label}</strong>
+      <span style="color:var(--ink3)">${distImpQueue[m].matched} agences</span>
+      <button onclick="removeFromDistQueue('${m}')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink3);font-size:12px">✕</button>
+    </div>`).join('');
+}
+function removeFromDistQueue(m){delete distImpQueue[m];renderDistImpQueue();}
+
+function buildDistManualTbl(m){
+  document.getElementById('dist-m-tbody').innerHTML=AG.map(ag=>{
+    const d=D[ag.id]?.[m]||{};
+    const s=d.stars||{5:0,4:0,3:0,2:0,1:0};
+    const rec=d.rec||0, note=d.note||0;
+    return `<tr>
+      <td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td>
+      <td>${zb(ag.zone)}</td>
+      <td><input type="number" id="di-r-${ag.id}" value="${rec}" min="0" step="1"></td>
+      <td><input type="number" id="di-s5-${ag.id}" value="${s[5]||0}" min="0" step="1"></td>
+      <td><input type="number" id="di-s4-${ag.id}" value="${s[4]||0}" min="0" step="1"></td>
+      <td><input type="number" id="di-s3-${ag.id}" value="${s[3]||0}" min="0" step="1"></td>
+      <td><input type="number" id="di-s2-${ag.id}" value="${s[2]||0}" min="0" step="1"></td>
+      <td><input type="number" id="di-s1-${ag.id}" value="${s[1]||0}" min="0" step="1"></td>
+      <td><input type="number" id="di-n-${ag.id}" value="${note}" min="0" max="5" step="0.1"></td>
+    </tr>`;
+  }).join('');
+}
+
+function saveDistImp(){
+  const isXLS=document.getElementById('dist-tab-xls').style.display!=='none';
+  if(isXLS){
+    if(distImpData&&Object.keys(distImpData.data).length){
+      distImpQueue[distImpData.month]=distImpData;
+      distImpData=null;
+      document.getElementById('dist-imp-preview').style.display='none';
+      document.getElementById('dist-imp-match').style.display='none';
+      document.getElementById('dist-imp-fi').value='';
+      renderDistImpQueue();
+    }
+    const months=Object.keys(distImpQueue);
+    if(!months.length){toast('⚠ Aucune donnée à enregistrer.');return;}
+    months.forEach(m=>{
+      addMonth(m);
+      Object.keys(distImpQueue[m].data).forEach(id=>{
+        if(!D[id])D[id]={};
+        if(!D[id][m])D[id][m]={total:0,rec:0,note:0,qr:0};
+        const d=distImpQueue[m].data[id];
+        // Fusionner : on met à jour rec, stars, note SANS toucher total/qr existants
+        D[id][m].rec=d.rec;
+        D[id][m].stars=d.stars;
+        if(d.note>0)D[id][m].note=d.note;
+      });
+    });
+    saveLS();
+    const nb=months.length;
+    const lastM=months[months.length-1];
+    curMonth=lastM;
+    buildMonthSelects();
+    distImpQueue={};
+    renderDistImpQueue();
+    closeDistImpModal();
+    renderOverview();
+    toast(`✅ Répartition enregistrée pour ${nb} mois · Affichage : ${ml(lastM)}`);
+  } else {
+    const manMonthSel=document.getElementById('dist-man-month-sel');
+    const m=manMonthSel?manMonthSel.value:curMonth;
+    if(!m){toast('⚠ Sélectionnez un mois.');return;}
+    if(!MONTHS.includes(m)){MONTHS.push(m);buildMonthSelects();}
+    AG.forEach(ag=>{
+      if(!D[ag.id])D[ag.id]={};
+      if(!D[ag.id][m])D[ag.id][m]={total:0,rec:0,note:0,qr:0};
+      const rec=parseInt(document.getElementById(`di-r-${ag.id}`)?.value)||0;
+      const s5=parseInt(document.getElementById(`di-s5-${ag.id}`)?.value)||0;
+      const s4=parseInt(document.getElementById(`di-s4-${ag.id}`)?.value)||0;
+      const s3=parseInt(document.getElementById(`di-s3-${ag.id}`)?.value)||0;
+      const s2=parseInt(document.getElementById(`di-s2-${ag.id}`)?.value)||0;
+      const s1=parseInt(document.getElementById(`di-s1-${ag.id}`)?.value)||0;
+      const note=parseFloat(document.getElementById(`di-n-${ag.id}`)?.value)||0;
+      D[ag.id][m].rec=rec;
+      D[ag.id][m].stars={5:s5,4:s4,3:s3,2:s2,1:s1};
+      if(note>0)D[ag.id][m].note=note;
+    });
+    curMonth=m;
+    [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
+    saveLS();
+    closeDistImpModal();
+    renderOverview();
+    toast(`✅ Répartition enregistrée pour ${ml(m)}`);
+  }
+}
 
 function buildManualTbl(m){
   document.getElementById('m-tbody').innerHTML=AG.map(ag=>{const d=D[ag.id]?.[m]||{total:0,rec:0,note:0,qr:0};return `<tr><td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td><td>${zb(ag.zone)}</td><td><input type="number" id="mi-t-${ag.id}" value="${d.total}" min="0" step="1"></td><td><input type="number" id="mi-r-${ag.id}" value="${d.rec}" min="0" step="1"></td><td><input type="number" id="mi-n-${ag.id}" value="${d.note}" min="0" max="5" step="0.1"></td><td><input type="number" id="mi-q-${ag.id}" value="${d.qr}" min="0" step="1"></td></tr>`;}).join('');
