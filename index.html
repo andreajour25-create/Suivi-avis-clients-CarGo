@@ -917,15 +917,22 @@ function applyData(sv){
   AG.forEach(a=>{
     if(sv[a.id])Object.entries(sv[a.id]).forEach(([m,d])=>{
       if(!d)return;
+      const hasData = (d.total>0)||(d.rec>0)||(d.note>0)||(d.qr>0)||(d.resa>0)
+                      ||(d.stars&&Object.values(d.stars).some(v=>v>0));
       if(!HARDCODED.includes(m)){
-        // Mois non hardcodé (importé) → toujours appliquer
-        D[a.id][m]=d;
-      } else {
-        // Mois hardcodé → appliquer seulement si les données importées
-        // contiennent au moins une valeur non nulle (= vraie saisie, pas le placeholder vide)
-        const hasData = (d.total>0)||(d.rec>0)||(d.note>0)||(d.qr>0)||(d.resa>0)
-                        ||(d.stars&&Object.values(d.stars).some(v=>v>0));
-        if(hasData) D[a.id][m]=d;
+        // Mois non hardcodé (importé) → fusionner champ par champ
+        if(!D[a.id][m])D[a.id][m]={total:0,rec:0,note:0,qr:0};
+        D[a.id][m]={...D[a.id][m],...d};
+        // Ne jamais écraser une note existante > 0 par une note importée = 0
+        if(d.note===0&&D[a.id][m].note>0&&!hasData){/* garder l'ancienne note */}
+        else if(d.note>0)D[a.id][m].note=d.note;
+      } else if(hasData){
+        // Mois hardcodé → fusionner uniquement si la donnée importée est valide
+        if(!D[a.id][m])D[a.id][m]={total:0,rec:0,note:0,qr:0};
+        const existingNote=D[a.id][m].note;
+        D[a.id][m]={...D[a.id][m],...d};
+        // Protection : ne jamais remplacer une note valide par 0
+        if(d.note===0&&existingNote>0)D[a.id][m].note=existingNote;
       }
     });
   });
@@ -1169,13 +1176,19 @@ function renderOverview(){
   // On se base sur les avis récoltés du mois par agence.
   const recFa=gfa(m).filter(a=>a.rec>0);
   const totalRec=recFa.reduce((s,a)=>s+a.rec,0);
-  const avgRec=recFa.length>0?(totalRec/recFa.length).toFixed(1):0;
+
+  // Moyenne des notes (sur 5) des avis récoltés — uniquement agences ayant reçu des avis
+  // = somme des notes / nombre d'agences avec rec>0
+  const recFaWithNote=recFa.filter(a=>a.note>0);
+  const avgNoteRec=recFaWithNote.length>0
+    ? (recFaWithNote.reduce((s,a)=>s+a.note,0)/recFaWithNote.length).toFixed(2)
+    : 0;
 
   const hasRealStars=recFa.some(a=>a.stars&&Object.values(a.stars).some(v=>v>0));
   document.getElementById('dist-lbl').textContent=
     `${totalRec} avis · ${ml(m)}${hasRealStars?' · données réelles':' · estimation'}`;
   document.getElementById('dist-avg').textContent=
-    recFa.length>0?`Ø ${avgRec} avis / agence`:'';
+    recFaWithNote.length>0?`Ø ${avgNoteRec} / 5`:'';
 
   // stars[0]=1★ … stars[4]=5★
   const stars=[0,0,0,0,0];
