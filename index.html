@@ -503,13 +503,19 @@ input.fi{display:none}
 
     <div style="background:var(--paper2);border-radius:var(--r3);padding:12px;margin-bottom:14px">
       <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Code Google Apps Script à copier</div>
-      <pre style="font-size:10px;font-family:monospace;color:var(--ink2);white-space:pre-wrap;line-height:1.6;max-height:180px;overflow-y:auto">function doGet(e){
+      <pre style="font-size:10px;font-family:monospace;color:var(--ink2);white-space:pre-wrap;line-height:1.6;max-height:220px;overflow-y:auto">function doGet(e){
   var action=e.parameter.action;
   var ss=SpreadsheetApp.openById('VOTRE_SHEET_ID');
   var sheet=ss.getSheetByName('data')||ss.insertSheet('data');
   if(action==='read'){
-    var val=sheet.getRange(1,1).getValue();
-    var data=val?JSON.parse(val):{};
+    var rows=sheet.getDataRange().getValues();
+    var data={};
+    for(var i=0;i<rows.length;i++){
+      var key=rows[i][0];
+      var val=rows[i][1];
+      if(!key)continue;
+      try{data[key]=JSON.parse(val);}catch(err){data[key]=val;}
+    }
     return ContentService.createTextOutput(JSON.stringify({ok:true,data:data}))
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -521,13 +527,24 @@ function doPost(e){
   if(body.action==='write'){
     var ss=SpreadsheetApp.openById('VOTRE_SHEET_ID');
     var sheet=ss.getSheetByName('data')||ss.insertSheet('data');
-    sheet.getRange(1,1).setValue(JSON.stringify(body.data));
+    sheet.clearContents();
+    var data=body.data;
+    var rowIndex=1;
+    for(var key in data){
+      sheet.getRange(rowIndex,1).setValue(key);
+      sheet.getRange(rowIndex,2).setValue(JSON.stringify(data[key]));
+      rowIndex++;
+    }
     return ContentService.createTextOutput(JSON.stringify({ok:true}))
       .setMimeType(ContentService.MimeType.JSON);
   }
   return ContentService.createTextOutput(JSON.stringify({error:'unknown action'}))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
+    </div>
+
+    <div style="background:var(--amber-bg);border-radius:var(--r3);padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--amber)">
+      ⚠ Si vous aviez déjà un script avec l'ancien code (une seule cellule A1), <strong>remplacez tout le contenu</strong> par cette nouvelle version et redéployez (Déployer → Gérer les déploiements → ✏️ → Nouvelle version). L'ancien format limitait les données à 50 000 caractères par cellule, ce qui tronquait les mois les plus anciens.
     </div>
 
     <div style="display:flex;flex-direction:column;gap:12px">
