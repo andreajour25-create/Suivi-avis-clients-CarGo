@@ -1067,17 +1067,25 @@ function applyData(sv){
       if(!HARDCODED.includes(m)){
         // Mois non hardcodé (importé) → fusionner champ par champ
         if(!D[a.id][m])D[a.id][m]={total:0,rec:0,note:0,qr:0};
+        const oldNoteRec=D[a.id][m].noteRec;
         D[a.id][m]={...D[a.id][m],...d};
         // Ne jamais écraser une note existante > 0 par une note importée = 0
         if(d.note===0&&D[a.id][m].note>0&&!hasData){/* garder l'ancienne note */}
         else if(d.note>0)D[a.id][m].note=d.note;
+        // noteRec : si rec=0 explicite, noteRec doit être 0 (pas de moyenne sans avis)
+        if(d.rec===0){D[a.id][m].noteRec=0;}
+        else if(d.noteRec===undefined&&oldNoteRec!==undefined){D[a.id][m].noteRec=oldNoteRec;}
       } else if(hasData){
         // Mois hardcodé → fusionner uniquement si la donnée importée est valide
         if(!D[a.id][m])D[a.id][m]={total:0,rec:0,note:0,qr:0};
         const existingNote=D[a.id][m].note;
+        const existingNoteRec=D[a.id][m].noteRec;
         D[a.id][m]={...D[a.id][m],...d};
         // Protection : ne jamais remplacer une note valide par 0
         if(d.note===0&&existingNote>0)D[a.id][m].note=existingNote;
+        // noteRec : si rec=0 explicite, noteRec doit être 0
+        if(d.rec===0){D[a.id][m].noteRec=0;}
+        else if(d.noteRec===undefined&&existingNoteRec!==undefined){D[a.id][m].noteRec=existingNoteRec;}
       }
     });
   });
@@ -1309,7 +1317,7 @@ function renderOverview(){
 
   dc('ne');CH['ne']=new Chart(document.getElementById('ch-ne'),{type:'line',data:{labels:MONTHS.map(ml),datasets:[
     {label:'Note succursales',data:MONTHS.map(mo=>{const f2=gfa(mo).filter(a=>a.note>0);return f2.length?+(f2.reduce((s,a)=>s+a.note,0)/f2.length).toFixed(2):null;}),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.45,fill:true,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#e85d04':'rgba(232,93,4,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
-    {label:'Note avis récoltés',data:MONTHS.map(mo=>{const recM=gfa(mo).filter(a=>a.rec>0&&a.note>0);return recM.length?+(recM.reduce((s,a)=>s+a.note,0)/recM.length).toFixed(2):null;}),borderColor:'#0369a1',backgroundColor:'rgba(3,105,161,.05)',tension:.45,fill:false,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#0369a1':'rgba(3,105,161,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5,borderDash:[5,3]}
+    {label:'Note avis récoltés',data:MONTHS.map(mo=>{const recM=gfa(mo).filter(a=>a.rec>0&&((a.noteRec>0)||(a.noteRec===undefined&&a.note>0)));return recM.length?+(recM.reduce((s,a)=>s+(a.noteRec!==undefined?a.noteRec:a.note),0)/recM.length).toFixed(2):null;}),borderColor:'#0369a1',backgroundColor:'rgba(3,105,161,.05)',tension:.45,fill:false,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#0369a1':'rgba(3,105,161,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5,borderDash:[5,3]}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{min:3,max:5.2,ticks:{callback:v=>v.toFixed(1)},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
   dc('ae');CH['ae']=new Chart(document.getElementById('ch-ae'),{type:'bar',data:{labels:MONTHS.map(ml),datasets:[{data:MONTHS.map(mo=>gfa(mo).reduce((s,a)=>s+a.rec,0)),backgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#1a7a4a':'#b7e4c7'),borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
@@ -1326,10 +1334,11 @@ function renderOverview(){
   const totalRec=recFa.reduce((s,a)=>s+a.rec,0);
 
   // Moyenne des notes (sur 5) des avis récoltés — uniquement agences ayant reçu des avis
-  // = somme des notes / nombre d'agences avec rec>0
-  const recFaWithNote=recFa.filter(a=>a.note>0);
+  // = somme des notes de répartition / nombre d'agences avec rec>0
+  // Utilise noteRec (note spécifique aux avis récoltés) si disponible, sinon note (rétrocompat)
+  const recFaWithNote=recFa.filter(a=>(a.noteRec>0)||(a.noteRec===undefined&&a.note>0));
   const avgNoteRec=recFaWithNote.length>0
-    ? (recFaWithNote.reduce((s,a)=>s+a.note,0)/recFaWithNote.length).toFixed(2)
+    ? (recFaWithNote.reduce((s,a)=>s+(a.noteRec!==undefined?a.noteRec:a.note),0)/recFaWithNote.length).toFixed(2)
     : 0;
 
   const hasRealStars=recFa.some(a=>a.stars&&Object.values(a.stars).some(v=>v>0));
@@ -2226,10 +2235,12 @@ function saveDistImp(){
         if(!D[id])D[id]={};
         if(!D[id][m])D[id][m]={total:0,rec:0,note:0,qr:0};
         const d=distImpQueue[m].data[id];
-        // Fusionner : on met à jour rec, stars, note SANS toucher total/qr existants
+        // Fusionner : on met à jour rec, stars SANS toucher total/qr/note (note Google) existants
         D[id][m].rec=d.rec;
         D[id][m].stars=d.stars;
-        if(d.note>0)D[id][m].note=d.note;
+        // noteRec = moyenne des avis récoltés, distincte de la note Google globale
+        // Si 0 avis récolté, pas de moyenne possible : noteRec = 0
+        D[id][m].noteRec=d.rec>0?(d.note||0):0;
       });
     });
     saveLS();
@@ -2259,7 +2270,8 @@ function saveDistImp(){
       const note=parseFloat(document.getElementById(`di-n-${ag.id}`)?.value)||0;
       D[ag.id][m].rec=rec;
       D[ag.id][m].stars={5:s5,4:s4,3:s3,2:s2,1:s1};
-      if(note>0)D[ag.id][m].note=note;
+      // noteRec = moyenne des avis récoltés, distincte de la note Google globale
+      D[ag.id][m].noteRec=rec>0?note:0;
     });
     curMonth=m;
     [...document.getElementById('sel-month').options].forEach(o=>o.selected=(o.value===m));
