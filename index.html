@@ -303,7 +303,7 @@ input.fi{display:none}
   </div>
   <div class="card">
     <div class="sttl">Toutes les agences <span class="stag" id="tbl-zlbl"></span></div>
-    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Total avis</th><th>Récoltés ce mois</th><th>Évol. m-1</th><th>Note moy.</th><th>Évol. note</th><th>Scans QR</th></tr></thead><tbody id="main-tbody"></tbody></table></div>
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Zone</th><th>Agence</th><th>Total avis</th><th>Récoltés ce mois</th><th>Évol. récoltés (m-1)</th><th>Moy. Fiche Google</th><th>Évol. note (m-1)</th><th>Scans QR</th></tr></thead><tbody id="main-tbody"></tbody></table></div>
   </div>
 </div>
 
@@ -1288,7 +1288,7 @@ function renderOverview(){
 
   document.getElementById('hero-band').innerHTML=`
     <div style="text-align:center;padding:4px 20px 4px 0;border-right:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Note succursales</div>
+      <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Moyenne Fiche Google Succursales</div>
       <div style="font-family:'Syne',sans-serif;font-size:52px;font-weight:800;line-height:1;color:${noteStyle.col};background:${noteStyle.bg};padding:8px 16px;border-radius:12px">${nA.toFixed(2)}<span style="font-size:20px;font-weight:400;color:var(--ink3)">/5</span></div>
       <div style="margin-top:6px">${starsHtml(nA)}</div>
       <div style="margin-top:4px">${trendArrow}</div>
@@ -1316,7 +1316,7 @@ function renderOverview(){
     </div>`;
 
   dc('ne');CH['ne']=new Chart(document.getElementById('ch-ne'),{type:'line',data:{labels:MONTHS.map(ml),datasets:[
-    {label:'Note succursales',data:MONTHS.map(mo=>{const f2=gfa(mo).filter(a=>a.note>0);return f2.length?+(f2.reduce((s,a)=>s+a.note,0)/f2.length).toFixed(2):null;}),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.45,fill:true,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#e85d04':'rgba(232,93,4,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
+    {label:'Moyenne Fiche Google Succursales',data:MONTHS.map(mo=>{const f2=gfa(mo).filter(a=>a.note>0);return f2.length?+(f2.reduce((s,a)=>s+a.note,0)/f2.length).toFixed(2):null;}),borderColor:'#e85d04',backgroundColor:'rgba(232,93,4,.07)',tension:.45,fill:true,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#e85d04':'rgba(232,93,4,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
     {label:'Note avis récoltés',data:MONTHS.map(mo=>{const recM=gfa(mo).filter(a=>a.rec>0&&((a.noteRec>0)||(a.noteRec===undefined&&a.note>0)));return recM.length?+(recM.reduce((s,a)=>s+(a.noteRec!==undefined?a.noteRec:a.note),0)/recM.length).toFixed(2):null;}),borderColor:'#0369a1',backgroundColor:'rgba(3,105,161,.05)',tension:.45,fill:false,pointRadius:MONTHS.map(mo=>selMonths.includes(mo)?6:3),pointBackgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#0369a1':'rgba(3,105,161,.4)'),pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5,borderDash:[5,3]}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',align:'end',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{min:3,max:5.2,ticks:{callback:v=>v.toFixed(1)},grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
   dc('ae');CH['ae']=new Chart(document.getElementById('ch-ae'),{type:'bar',data:{labels:MONTHS.map(ml),datasets:[{data:MONTHS.map(mo=>gfa(mo).reduce((s,a)=>s+a.rec,0)),backgroundColor:MONTHS.map(mo=>selMonths.includes(mo)?'#1a7a4a':'#b7e4c7'),borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
