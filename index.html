@@ -470,7 +470,7 @@ input.fi{display:none}
         <select id="dist-man-month-sel" style="border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:13px;font-family:'Inter',sans-serif;font-weight:600;background:var(--paper);color:var(--ink)" onchange="buildDistManualTbl(this.value)"></select>
       </div>
       <div style="overflow-x:auto"><table class="dtbl">
-        <thead><tr><th>Agence</th><th>Zone</th><th>Récoltés</th><th>5★</th><th>4★</th><th>3★</th><th>2★</th><th>1★</th><th>Note moy.</th></tr></thead>
+        <thead><tr><th>Agence</th><th>Zone</th><th>Récoltés</th><th>5★</th><th>4★</th><th>3★</th><th>2★</th><th>1★</th><th>Note avis récoltés</th></tr></thead>
         <tbody id="dist-m-tbody"></tbody>
       </table></div>
     </div>
@@ -2201,7 +2201,10 @@ function buildDistManualTbl(m){
   document.getElementById('dist-m-tbody').innerHTML=AG.map(ag=>{
     const d=D[ag.id]?.[m]||{};
     const s=d.stars||{5:0,4:0,3:0,2:0,1:0};
-    const rec=d.rec||0, note=d.note||0;
+    const rec=d.rec||0;
+    const noteRec=d.noteRec||0;
+    // Champ vide si rec=0 ou noteRec=0 (pas de moyenne possible sans avis récolté)
+    const noteDisplay=noteRec>0?noteRec:'';
     return `<tr>
       <td style="font-weight:600;font-size:11px;white-space:nowrap">${ag.name}</td>
       <td>${zb(ag.zone)}</td>
@@ -2211,7 +2214,7 @@ function buildDistManualTbl(m){
       <td><input type="number" id="di-s3-${ag.id}" value="${s[3]||0}" min="0" step="1"></td>
       <td><input type="number" id="di-s2-${ag.id}" value="${s[2]||0}" min="0" step="1"></td>
       <td><input type="number" id="di-s1-${ag.id}" value="${s[1]||0}" min="0" step="1"></td>
-      <td><input type="number" id="di-n-${ag.id}" value="${note}" min="0" max="5" step="0.1"></td>
+      <td><input type="number" id="di-n-${ag.id}" value="${noteDisplay}" min="0" max="5" step="0.1" placeholder="—"></td>
     </tr>`;
   }).join('');
 }
